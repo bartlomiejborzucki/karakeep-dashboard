@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation and assets not shipped in the image
+README.md
+screenshot.png
+
+# Compose files are for the host, not the image
+docker-compose*.yml
+
+# Build output and installed packages are produced inside the image
+dist/
+node_modules/
+
+# Never ship an npm config into a layer (node:24-alpine already defaults to the
+# public registry, so the build does not need it)
+.npmrc
+
+# Legacy: databases were mounted by the pre-API version
+*.db
+*.sqlite
+*.sqlite3
+config/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

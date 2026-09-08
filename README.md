@@ -1,0 +1,264 @@
+# KaraKeep HomeDash
+
+A compact, home-page style dashboard for browsing your [KaraKeep](https://github.com/karakeep-app/karakeep) bookmarks. Every bookmark on one page, organised by list. Bookmark management stays in the full (and excellent) KaraKeep app — this is just a fast way to *get to* your links.
+
+![KaraKeep HomeDash Screenshot](screenshot.png)
+
+## Features
+
+- 📚 **Masonry layout** — Pinterest-style columns that use the whole screen
+- ⚡ **Instant** — renders from a local cache before it makes a single network request
+- 🔌 **API-based** — paste an API key once; no database file to mount
+- 🔍 **Real-time search** — filters as you type, entirely offline
+- 🖱️ **Drag & drop** — arrange lists across columns; the layout is remembered
+- 📴 **Works offline** — the last view stays available when Karakeep is unreachable
+- 📱 **Responsive** — desktop, tablet and mobile
+- 🏷️ **Tags & descriptions** — searchable always, shown on cards when you want them
+- 🔒 **No backend** — your API key lives in your browser and is sent only to your own Karakeep
+
+## Quick start
+
+### 1. Run it
+
+```yaml
+services:
+  karakeep-homedash:
+    image: ghcr.io/codejawn/karakeep-homedash:latest
+    container_name: karakeep-homedash
+    ports:
+      - "8595:8595"
+    environment:
+      KARAKEEP_URL: http://localhost:3000
+    restart: unless-stopped
+```
+
+```bash
+docker compose up -d
+```
+
+### 2. Connect it
+
+1. In KaraKeep, go to **Settings → API Keys** and create a key.
+2. Open <http://localhost:8595>.
+3. Paste your KaraKeep address and the API key.
+
+That's it. The key is stored in your browser's `localStorage` and used only to call your own KaraKeep instance.
+
+### Adding it to KaraKeep's own compose file
+
+Drop this in next to `web`, `chrome` and `meilisearch` (see `docker-compose.karakeep.yml`):
+
+```yaml
+  homedash:
+    image: ghcr.io/codejawn/karakeep-homedash:latest
+    restart: unless-stopped
+    ports:
+      - 8595:8595
+    environment:
+      KARAKEEP_URL: http://localhost:3000
+```
+
+> **`KARAKEEP_URL` must be the address your _browser_ can reach.**
+> `http://web:3000` will not work — that hostname only resolves inside Docker, and every
+> API call is made by your browser, not by this container. HomeDash needs no shared
+> network and no `depends_on`; it only serves static files.
+
+### On a Synology NAS with Dockhand
+
+`docker-compose.synology.yml` is this stack, ready to paste. It works the same in
+Portainer or in DSM's own **Container Manager** (**Project → Create →
+*Create docker-compose.yml***).
+
+1. **Note your NAS's LAN address** — the one you already type to reach DSM, e.g.
+   `192.168.1.50`. Substitute it everywhere below.
+2. In **Dockhand → Stacks**, create a new stack called `karakeep-homedash`.
+3. Paste this, with your own address on the `KARAKEEP_URL` line:
+
+   ```yaml
+   services:
+     karakeep-homedash:
+       image: ghcr.io/codejawn/karakeep-homedash:latest
+       container_name: karakeep-homedash
+       ports:
+         # host:container. Change ONLY the left number if 8595 is taken.
+         - "8595:8595"
+       environment:
+         # Karakeep as your BROWSER sees it — the NAS's LAN address, not "localhost"
+         # (that is the device you are browsing from) and not a Docker service name.
+         KARAKEEP_URL: http://192.168.1.50:3000
+       restart: unless-stopped
+   ```
+
+4. **Deploy**, open <http://192.168.1.50:8595>, and paste an API key from
+   KaraKeep's **Settings → API Keys**.
+
+Even when KaraKeep runs on the same NAS, keep `KARAKEEP_URL` as the LAN address:
+`http://web:3000` resolves only inside Docker, and it is your browser that calls the API.
+
+**NAS-specific notes**
+
+- **Nothing to back up, no volume to mount.** The API key, the cached bookmarks and the
+  column layout live in the browser (`localStorage` + IndexedDB), per device — so each
+  browser pastes the key once, and clearing browsing data signs that browser out. The
+  container itself is stateless.
+- **Ports.** DSM already uses 5000/5001, and its packages claim plenty more. 8595 is
+  normally free; if the deploy fails with *port is already allocated*, change only the
+  left-hand number (`"8600:8595"`) and open that port instead.
+- **Firewall.** If DSM's firewall is enabled (**Control Panel → Security → Firewall**),
+  add an allow rule for the host port.
+- **Architecture.** The image is published for `linux/amd64` and `linux/arm64`, which
+  covers Intel models and current ARM ones. Older 32-bit ARMv7 units cannot run it.
+- **Updating.** Dockhand → the stack → **Redeploy** with *re-pull image*. There is no
+  server-side state, so an update cannot lose anything.
+- **HTTPS and DSM's reverse proxy.** If you publish HomeDash through **Control Panel →
+  Login Portal → Advanced → Reverse Proxy** and open it over `https://`, then KaraKeep
+  must be reachable over `https://` too. Browsers refuse to let an `https://` page call
+  an `http://` API, and HomeDash will say *"Blocked by the browser"*. Serve both over
+  plain `http://` on the LAN, or put both behind the proxy with certificates.
+- **Remote access.** There is no login screen in front of HomeDash, so treat the port as
+  LAN-only: reach it over Tailscale/WireGuard or behind the reverse proxy's own
+  authentication rather than forwarding 8595 on your router.
+
+## Configuration
+
+| Setting | Where | Notes |
+|---|---|---|
+| `KARAKEEP_URL` | container env var | Optional. Only pre-fills the setup form. Never a token. |
+| KaraKeep address | setup screen / ⚙ settings | Stored in `localStorage` |
+| API key | setup screen / ⚙ settings | Stored in `localStorage`, never leaves your browser |
+| Number of columns | ⚙ settings | 2–6, default 4. Changing it resets the saved layout. |
+| Open in new tab | ⚙ settings | `target="_blank"` for bookmark links |
+| Show tags | ⚙ settings | Off by default. Tags are searchable either way. |
+| Include smart lists | ⚙ settings | Off by default |
+| Column layout | drag & drop | Saved automatically |
+
+The ⚙ menu also offers **Refresh now**, **Clear cache** and **Sign out**.
+
+## How it stays fast
+
+Loading is stale-while-revalidate, and the ordering is the whole trick: **nothing on the path to first paint touches the network.**
+
+1. Credentials and preferences come from `localStorage` — synchronous, sub-millisecond.
+2. The view model comes from a single IndexedDB read. It is stored already normalized and already sorted, so there is no transformation work at boot: one read, one tree walk, one `innerHTML`.
+3. Only *after* the grid is on screen does revalidation start.
+4. Revalidation first asks `/users/me/stats` and `/lists` — two cheap requests. If neither the counters nor the lists have changed and the cache is under 15 minutes old, it stops there. Nothing is refetched and the DOM is not touched.
+5. Otherwise it fans out across lists (6 at a time, cursor-paginated, `includeContent=false`) and re-renders only if the result actually differs.
+
+A service worker caches favicons, so a warm load issues zero requests for icons, and provides an offline fallback for the app itself. It is network-first for the app and touches nothing but images cross-origin, so it cannot pin you to a stale version.
+
+Bundled assets are content-hashed (`assets/main-9c61bb9f.js`), so they are served `immutable` for a year and a new build invalidates them by changing the URL.
+
+### Search
+
+Search runs against the local cache, so it is instant and works offline. It matches titles, URLs **and tags**. When nothing on the dashboard matches, you are offered a **Search all of Karakeep** button that queries `/bookmarks/search` — that reaches archived bookmarks and ones not in any list, which the dashboard never holds.
+
+### Limits, stated plainly
+
+Counters do not move when a bookmark is *renamed* or *moved between lists*, so those edits are not detected by the cheap check. They are picked up by the 15-minute refresh, by returning to the tab, or by **Refresh now**. This is a deliberate trade: the alternative is 30–40 requests on every single page load.
+
+## Upgrading from the database version
+
+Earlier releases mounted KaraKeep's `db.db` read-only and queried it in the browser with SQLite-WASM. That is gone.
+
+- **Remove** the `db.db` and `./config` volume mounts — neither is used any more.
+- **Add** an API key on first load.
+- Your saved column layout carries over: the same `localStorage` keys are still read.
+
+This is also a meaningful security improvement. Previously, anyone who could reach port 8595 could download your entire KaraKeep database (`GET /db.db`), and the old Python server added `Access-Control-Allow-Origin: *` to *every* response, so any website you visited could read it cross-origin and overwrite your config through an unauthenticated `POST /api/preferences`. None of that exists now.
+
+## Development
+
+TypeScript, bundled with esbuild. The only runtime dependency is SortableJS, and it
+is bundled at build time — the published image contains nginx and static files, nothing else.
+
+Requires **Node 24+** (the tests run TypeScript directly, which needs Node's
+native type stripping). There is an `.nvmrc`, so `nvm use` picks the right one.
+
+```bash
+nvm use            # reads .nvmrc -> Node 24
+npm ci             # .npmrc pins the public registry, so no flags are needed
+npm run check      # typecheck + tests
+npm run build      # -> dist/
+npm run dev        # unminified build with inline sourcemaps
+
+# Serve the build any way you like
+python3 -m http.server 8595 --directory dist
+```
+
+Layout:
+
+```
+index.html       shell, CSP, mount points; build.mjs rewrites the asset URLs
+styles.css       design system (CSS custom properties, auto dark mode)
+env.js           placeholder; regenerated in the container from KARAKEEP_URL
+build.mjs        esbuild bundle + content hashing + HTML templating
+src/types.ts     API shapes and the normalized model
+src/config.ts    constants, storage keys, cache schema version
+src/storage.ts   localStorage: credentials + preferences (+ legacy migration)
+src/cache.ts     IndexedDB: the view snapshot
+src/api.ts       Karakeep REST client: auth, cursor draining, error taxonomy
+src/model.ts     normalize -> snapshot -> tree; SQLite BINARY sort order
+src/render.ts    HTML generation (escaped), column distribution
+src/search.ts    precomputed index, class-based filtering
+src/dnd.ts       SortableJS wiring and layout persistence
+src/ui.ts        setup screen, settings, toasts, banner
+src/main.ts      boot orchestration and revalidation
+src/sw.ts        service worker: favicon cache + offline fallback
+test/            logic tests, run directly as .ts by node --test
+```
+
+`tsconfig.json` checks `src/` under `strict` plus `noUncheckedIndexedAccess`;
+`tsconfig.test.json` relaxes the index check for tests, and `tsconfig.sw.json`
+type-checks the worker against the WebWorker lib instead of DOM.
+
+### Why CORS just works
+
+KaraKeep's `next.config.mjs` sets `Access-Control-Allow-Origin: *` and allows the
+`Authorization` header for `/api/(.*)`, so the browser can call the API directly and no
+proxy is needed. If you see a CORS error, a reverse proxy in front of KaraKeep is
+stripping those headers.
+
+## Troubleshooting
+
+**"Cannot reach Karakeep"** — Check the address in ⚙ settings. The error box includes a
+ready-to-paste `curl` command that shows whether the API is reachable and whether the CORS
+headers survive your reverse proxy.
+
+**"Blocked by the browser"** — You are loading this dashboard over `https://` while
+KaraKeep is on `http://`. Browsers refuse that combination. Serve both over the same
+scheme.
+
+**"API key rejected"** — The key was revoked or mistyped. The dashboard keeps showing your
+cached bookmarks and offers a **Reconnect** banner rather than dumping you back to a login
+form; generate a new key in KaraKeep and paste it in ⚙ settings.
+
+**"Not a Karakeep instance"** — Nothing answered at `<address>/api/v1`. Check for a path
+prefix in your reverse proxy configuration.
+
+**New bookmarks not appearing** — Renames and list moves are not caught by the cheap
+change check. Use ⚙ → **Refresh now**, or wait for the 15-minute refresh.
+
+**Nothing answers on `http://<nas-ip>:8595`** — Check that the stack is running and that
+the host port is not already taken (Dockhand will have reported *port is already
+allocated*), then check DSM's firewall. `curl -I http://<nas-ip>:8595` from another
+machine on the LAN separates "container not up" from "blocked on the way in".
+
+**Everything piled into one column after changing the column count** — should not
+happen: changing the count clears the saved layout on purpose. If it does, use
+⚙ → **Clear cache**.
+
+## Contributing
+
+Contributions welcome. Run `npm run check` before opening a pull request. CI runs the
+same checks, then builds the image and smoke-tests it end to end: every asset is
+fetched, cache headers are asserted, and `KARAKEEP_URL` is fed a hostile value to
+confirm it cannot inject code into the generated `env.js`.
+
+## License
+
+GNU GPL v3 — see the LICENSE file.
+
+## Acknowledgments
+
+- Built to complement the amazing [KaraKeep](https://github.com/karakeep-app/karakeep)
+- Drag & drop by [SortableJS](https://github.com/SortableJS/Sortable)

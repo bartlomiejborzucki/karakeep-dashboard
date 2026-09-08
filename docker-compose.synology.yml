@@ -1,0 +1,26 @@
+# Synology / UGREEN NAS stack — paste into Dockhand (Stacks -> new stack), Portainer,
+# or DSM's Container Manager (Project -> Create -> "Create docker-compose.yml").
+#
+# There is exactly one thing to edit: KARAKEEP_URL. No volumes, no shared network and
+# no depends_on, even when Karakeep runs on the same NAS — HomeDash only serves static
+# files, and every API call is made by your browser straight to Karakeep.
+
+services:
+  karakeep-homedash:
+    image: ghcr.io/codejawn/karakeep-homedash:latest
+    container_name: karakeep-homedash
+    ports:
+      # host:container. Change ONLY the left number if 8595 is taken on the NAS.
+      - "8595:8595"
+    environment:
+      # The address of Karakeep as seen from the BROWSER on your laptop or phone.
+      #
+      #   correct:   http://192.168.1.50:3000     (your NAS's LAN address)
+      #   correct:   https://karakeep.example.com (through a reverse proxy)
+      #   WRONG:     http://localhost:3000        (localhost is the device you browse from)
+      #   WRONG:     http://web:3000              (only resolves inside Docker)
+      #
+      # Optional: it just pre-fills the setup form. Never put an API key here — the key
+      # is pasted in the browser and stays there.
+      KARAKEEP_URL: http://192.168.1.50:3000
+    restart: unless-stopped

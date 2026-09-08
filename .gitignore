@@ -1,0 +1,32 @@
+# Legacy database files (the pre-API version mounted Karakeep's db.db)
+*.db
+*.sqlite
+*.sqlite3
+
+# Legacy config directory
+config/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+screenshot.html
+TODO
+
+node_modules/
+
+# Build output
+dist/

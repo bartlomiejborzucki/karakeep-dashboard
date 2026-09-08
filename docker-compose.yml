@@ -1,0 +1,16 @@
+services:
+  karakeep-homedash:
+    image: ghcr.io/codejawn/karakeep-homedash:latest
+    container_name: karakeep-homedash
+    ports:
+      - "8595:8595"
+    environment:
+      # Optional. Only pre-fills the address on the setup screen; you still paste
+      # your API key in the browser, and it is stored there and nowhere else.
+      #
+      # This must be the address your BROWSER can reach, not a Docker service name.
+      KARAKEEP_URL: http://localhost:3000
+    restart: unless-stopped
+
+# No database volume and no config volume any more: HomeDash talks to the Karakeep
+# REST API and keeps your token and cache in the browser.

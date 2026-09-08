@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The service worker runs in a different global scope, so it needs the
+    // WebWorker lib instead of DOM. Mixing the two in one program conflicts on
+    // `self`, `caches` and friends, hence the separate project.
+    "lib": ["ES2022", "WebWorker"]
+  },
+  "include": ["src/sw.ts"],
+  "exclude": []
+}

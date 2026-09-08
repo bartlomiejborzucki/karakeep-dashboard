@@ -1,0 +1,212 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Fast feedback ahead of the image build. The Dockerfile runs these again so a
+  # broken bundle can never be published even if this job is skipped.
+  checks:
+    name: Types and logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # Builds the image for the runner's own architecture and actually exercises it.
+  # A dashboard that builds but serves a 404 is not a successful build.
+  smoke-test:
+    name: Build and smoke-test
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (amd64, loaded locally)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: karakeep-homedash:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start container
+        run: |
+          docker run -d --name homedash-ci -p 8595:8595 \
+            -e KARAKEEP_URL='http://karakeep.example:3000' \
+            karakeep-homedash:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8595/ >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: Assets are served
+        run: |
+          set -euo pipefail
+          for path in / /index.html /env.js /sw.js; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8595${path}")
+            echo "${path} -> ${code}"
+            [ "$code" = "200" ] || { echo "::error::${path} returned ${code}"; exit 1; }
+          done
+          # Asset names are content-hashed, so discover them from the served HTML
+          # rather than hardcoding them.
+          html=$(curl -fsS http://127.0.0.1:8595/)
+          # Require a real extension: a bare `assets/` prefix also appears in prose.
+          for asset in $(echo "$html" | grep -oE 'assets/[A-Za-z0-9._-]+\.(js|css)'); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8595/${asset}")
+            echo "/${asset} -> ${code}"
+            [ "$code" = "200" ] || { echo "::error::/${asset} returned ${code}"; exit 1; }
+          done
+          echo "$html" | grep -qE 'assets/main-[a-f0-9]+\.js' \
+            || { echo "::error::index.html does not reference a hashed bundle"; exit 1; }
+
+      - name: KARAKEEP_URL is seeded into env.js
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS http://127.0.0.1:8595/env.js)
+          echo "$body"
+          echo "$body" | grep -q 'http://karakeep.example:3000' \
+            || { echo "::error::env.js did not pick up KARAKEEP_URL"; exit 1; }
+
+      - name: KARAKEEP_URL is sanitised before reaching JavaScript
+        run: |
+          set -euo pipefail
+          docker rm -f homedash-ci >/dev/null 2>&1 || true
+          docker run -d --name homedash-inj -p 8596:8595 \
+            -e KARAKEEP_URL='http://evil"; alert(1); //' \
+            karakeep-homedash:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8596/env.js >/dev/null 2>&1 && break
+            sleep 1
+          done
+          body=$(curl -fsS http://127.0.0.1:8596/env.js)
+          echo "$body"
+          # Evaluate the generated file in a sandbox and assert that no character
+          # capable of breaking out of the string literal survived the whitelist.
+          # (Grepping for "alert" would false-positive: stripping the quotes and
+          # parens leaves the harmless letters behind, which is the point.)
+          node -e '
+            const vm = require("vm");
+            const ctx = vm.createContext({});
+            vm.runInContext(process.argv[1], ctx);
+            const url = ctx.KARAKEEP_ENV && ctx.KARAKEEP_ENV.karakeepUrl;
+            if (typeof url !== "string") { console.error("KARAKEEP_ENV.karakeepUrl missing"); process.exit(1); }
+            if (/["\x27;()<>\\\s]/.test(url)) { console.error("unsafe characters survived: " + url); process.exit(1); }
+            console.log("sanitised to: " + url);
+          ' "$body"
+          docker rm -f homedash-inj >/dev/null 2>&1 || true
+
+      - name: Cache headers are as intended
+        run: |
+          set -euo pipefail
+          docker rm -f homedash-ci >/dev/null 2>&1 || true
+          docker run -d --name homedash-hdr -p 8597:8595 karakeep-homedash:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8597/ >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -sI http://127.0.0.1:8597/index.html | grep -i 'cache-control: no-cache' \
+            || { echo "::error::index.html should be no-cache"; exit 1; }
+          curl -sI http://127.0.0.1:8597/sw.js | grep -i 'cache-control: no-cache' \
+            || { echo "::error::sw.js should be no-cache"; exit 1; }
+          html=$(curl -fsS http://127.0.0.1:8597/)
+          js=$(echo "$html" | grep -oE 'assets/main-[A-Za-z0-9.-]+\.js' | head -1)
+          css=$(echo "$html" | grep -oE 'assets/styles-[A-Za-z0-9.-]+\.css' | head -1)
+          curl -sI "http://127.0.0.1:8597/${js}" | grep -i 'cache-control: max-age=31536000, immutable' \
+            || { echo "::error::hashed assets should be immutable"; exit 1; }
+          curl -sI -H 'Accept-Encoding: gzip' "http://127.0.0.1:8597/${css}" | grep -i 'content-encoding: gzip' \
+            || { echo "::error::css should be gzipped"; exit 1; }
+          docker rm -f homedash-hdr >/dev/null 2>&1 || true
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker ps -a && docker logs homedash-ci 2>&1 || true
+
+  publish:
+    name: Publish to GHCR
+    needs: smoke-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false

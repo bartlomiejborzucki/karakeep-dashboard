@@ -1,0 +1,16 @@
+# Paste this service into Karakeep's own docker/docker-compose.yml, alongside
+# `web`, `chrome` and `meilisearch`.
+#
+# HomeDash needs no shared network and no depends_on: it is a static file server,
+# and every API call is made by your browser, not by this container.
+
+services:
+  homedash:
+    image: ghcr.io/codejawn/karakeep-homedash:latest
+    restart: unless-stopped
+    ports:
+      - 8595:8595
+    environment:
+      # IMPORTANT: the address as seen from your BROWSER.
+      # "http://web:3000" will NOT work - that name only resolves inside Docker.
+      KARAKEEP_URL: http://localhost:3000

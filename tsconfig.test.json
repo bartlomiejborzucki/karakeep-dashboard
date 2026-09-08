@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Tests index into arrays whose shape they just constructed; requiring a guard
+    // on every `roots[0]` would add noise without catching anything real.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["src/sw.ts"]
+}
