@@ -60,7 +60,7 @@ export function renderSetup({ baseUrl = '', apiKey = '', error = null, busy = fa
             <div class="setup-card">
                 <h2 class="setup-title">Connect to Karakeep</h2>
                 <p class="setup-lead">
-                    HomeDash talks to your Karakeep instance over its API. Your key is stored
+                    KaraKeep Dashboard talks to your Karakeep instance over its API. Your key is stored
                     in this browser only &mdash; it is never sent anywhere else.
                 </p>
                 ${error ? `

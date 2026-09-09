@@ -2,13 +2,13 @@
 # or DSM's Container Manager (Project -> Create -> "Create docker-compose.yml").
 #
 # There is exactly one thing to edit: KARAKEEP_URL. No volumes, no shared network and
-# no depends_on, even when Karakeep runs on the same NAS — HomeDash only serves static
+# no depends_on, even when Karakeep runs on the same NAS — Dashboard only serves static
 # files, and every API call is made by your browser straight to Karakeep.
 
 services:
-  karakeep-homedash:
-    image: ghcr.io/codejawn/karakeep-homedash:latest
-    container_name: karakeep-homedash
+  karakeep-dashboard:
+    image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+    container_name: karakeep-dashboard
     ports:
       # host:container. Change ONLY the left number if 8595 is taken on the NAS.
       - "8595:8595"

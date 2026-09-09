@@ -3,12 +3,14 @@ name: Build and Publish Docker Image
 on:
   push:
     branches:
+      - master
       - main
       - develop
     tags:
       - 'v*'
   pull_request:
     branches:
+      - master
       - main
       - develop
   workflow_dispatch:
@@ -63,7 +65,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: karakeep-homedash:ci
+          tags: karakeep-dashboard:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -71,7 +73,7 @@ jobs:
         run: |
           docker run -d --name homedash-ci -p 8595:8595 \
             -e KARAKEEP_URL='http://karakeep.example:3000' \
-            karakeep-homedash:ci
+            karakeep-dashboard:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8595/ >/dev/null 2>&1 && break
             sleep 1
@@ -111,7 +113,7 @@ jobs:
           docker rm -f homedash-ci >/dev/null 2>&1 || true
           docker run -d --name homedash-inj -p 8596:8595 \
             -e KARAKEEP_URL='http://evil"; alert(1); //' \
-            karakeep-homedash:ci
+            karakeep-dashboard:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8596/env.js >/dev/null 2>&1 && break
             sleep 1
@@ -137,7 +139,7 @@ jobs:
         run: |
           set -euo pipefail
           docker rm -f homedash-ci >/dev/null 2>&1 || true
-          docker run -d --name homedash-hdr -p 8597:8595 karakeep-homedash:ci
+          docker run -d --name homedash-hdr -p 8597:8595 karakeep-dashboard:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8597/ >/dev/null 2>&1 && break
             sleep 1
@@ -190,14 +192,15 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-,format=short
+            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

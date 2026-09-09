@@ -1,7 +1,7 @@
 services:
-  karakeep-homedash:
-    image: ghcr.io/codejawn/karakeep-homedash:latest
-    container_name: karakeep-homedash
+  karakeep-dashboard:
+    image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+    container_name: karakeep-dashboard
     ports:
       - "8595:8595"
     environment:
@@ -11,6 +11,3 @@ services:
       # This must be the address your BROWSER can reach, not a Docker service name.
       KARAKEEP_URL: http://localhost:3000
     restart: unless-stopped
-
-# No database volume and no config volume any more: HomeDash talks to the Karakeep
-# REST API and keeps your token and cache in the browser.

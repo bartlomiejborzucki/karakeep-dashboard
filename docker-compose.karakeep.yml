@@ -1,12 +1,13 @@
 # Paste this service into Karakeep's own docker/docker-compose.yml, alongside
 # `web`, `chrome` and `meilisearch`.
 #
-# HomeDash needs no shared network and no depends_on: it is a static file server,
+# Dashboard needs no shared network and no depends_on: it is a static file server,
 # and every API call is made by your browser, not by this container.
 
 services:
-  homedash:
-    image: ghcr.io/codejawn/karakeep-homedash:latest
+  karakeep-dashboard:
+    image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+    container_name: karakeep-dashboard
     restart: unless-stopped
     ports:
       - 8595:8595

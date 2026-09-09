@@ -1,5 +1,5 @@
 {
-  "name": "karakeep-homedash",
+  "name": "karakeep-dashboard",
   "version": "2.0.0",
   "private": true,
   "description": "Compact dashboard view for Karakeep bookmarks, backed by the Karakeep REST API.",

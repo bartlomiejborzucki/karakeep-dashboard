@@ -1,8 +1,10 @@
-# KaraKeep HomeDash
+# KaraKeep Dashboard
 
 A compact, home-page style dashboard for browsing your [KaraKeep](https://github.com/karakeep-app/karakeep) bookmarks. Every bookmark on one page, organised by list. Bookmark management stays in the full (and excellent) KaraKeep app — this is just a fast way to *get to* your links.
 
-![KaraKeep HomeDash Screenshot](screenshot.png)
+**Docker Image:** `ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest`
+
+![KaraKeep Dashboard Screenshot](screenshot.png)
 
 ## Features
 
@@ -18,13 +20,32 @@ A compact, home-page style dashboard for browsing your [KaraKeep](https://github
 
 ## Quick start
 
+### Docker Image
+
+```text
+ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+```
+
 ### 1. Run it
+
+#### Docker CLI:
+
+```bash
+docker run -d \
+  --name karakeep-dashboard \
+  -p 8595:8595 \
+  -e KARAKEEP_URL=http://localhost:3000 \
+  --restart unless-stopped \
+  ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+```
+
+#### Docker Compose:
 
 ```yaml
 services:
-  karakeep-homedash:
-    image: ghcr.io/codejawn/karakeep-homedash:latest
-    container_name: karakeep-homedash
+  karakeep-dashboard:
+    image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+    container_name: karakeep-dashboard
     ports:
       - "8595:8595"
     environment:
@@ -49,8 +70,9 @@ That's it. The key is stored in your browser's `localStorage` and used only to c
 Drop this in next to `web`, `chrome` and `meilisearch` (see `docker-compose.karakeep.yml`):
 
 ```yaml
-  homedash:
-    image: ghcr.io/codejawn/karakeep-homedash:latest
+  karakeep-dashboard:
+    image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+    container_name: karakeep-dashboard
     restart: unless-stopped
     ports:
       - 8595:8595
@@ -60,7 +82,7 @@ Drop this in next to `web`, `chrome` and `meilisearch` (see `docker-compose.kara
 
 > **`KARAKEEP_URL` must be the address your _browser_ can reach.**
 > `http://web:3000` will not work — that hostname only resolves inside Docker, and every
-> API call is made by your browser, not by this container. HomeDash needs no shared
+> API call is made by your browser, not by this container. KaraKeep Dashboard needs no shared
 > network and no `depends_on`; it only serves static files.
 
 ### On a Synology NAS with Dockhand
@@ -71,14 +93,14 @@ Portainer or in DSM's own **Container Manager** (**Project → Create →
 
 1. **Note your NAS's LAN address** — the one you already type to reach DSM, e.g.
    `192.168.1.50`. Substitute it everywhere below.
-2. In **Dockhand → Stacks**, create a new stack called `karakeep-homedash`.
+2. In **Dockhand → Stacks**, create a new stack called `karakeep-dashboard`.
 3. Paste this, with your own address on the `KARAKEEP_URL` line:
 
    ```yaml
    services:
-     karakeep-homedash:
-       image: ghcr.io/codejawn/karakeep-homedash:latest
-       container_name: karakeep-homedash
+     karakeep-dashboard:
+       image: ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+       container_name: karakeep-dashboard
        ports:
          # host:container. Change ONLY the left number if 8595 is taken.
          - "8595:8595"
@@ -110,12 +132,12 @@ Even when KaraKeep runs on the same NAS, keep `KARAKEEP_URL` as the LAN address:
   covers Intel models and current ARM ones. Older 32-bit ARMv7 units cannot run it.
 - **Updating.** Dockhand → the stack → **Redeploy** with *re-pull image*. There is no
   server-side state, so an update cannot lose anything.
-- **HTTPS and DSM's reverse proxy.** If you publish HomeDash through **Control Panel →
+- **HTTPS and DSM's reverse proxy.** If you publish KaraKeep Dashboard through **Control Panel →
   Login Portal → Advanced → Reverse Proxy** and open it over `https://`, then KaraKeep
   must be reachable over `https://` too. Browsers refuse to let an `https://` page call
-  an `http://` API, and HomeDash will say *"Blocked by the browser"*. Serve both over
+  an `http://` API, and the dashboard will say *"Blocked by the browser"*. Serve both over
   plain `http://` on the LAN, or put both behind the proxy with certificates.
-- **Remote access.** There is no login screen in front of HomeDash, so treat the port as
+- **Remote access.** There is no login screen in front of KaraKeep Dashboard, so treat the port as
   LAN-only: reach it over Tailscale/WireGuard or behind the reverse proxy's own
   authentication rather than forwarding 8595 on your router.
 
@@ -155,16 +177,6 @@ Search runs against the local cache, so it is instant and works offline. It matc
 ### Limits, stated plainly
 
 Counters do not move when a bookmark is *renamed* or *moved between lists*, so those edits are not detected by the cheap check. They are picked up by the 15-minute refresh, by returning to the tab, or by **Refresh now**. This is a deliberate trade: the alternative is 30–40 requests on every single page load.
-
-## Upgrading from the database version
-
-Earlier releases mounted KaraKeep's `db.db` read-only and queried it in the browser with SQLite-WASM. That is gone.
-
-- **Remove** the `db.db` and `./config` volume mounts — neither is used any more.
-- **Add** an API key on first load.
-- Your saved column layout carries over: the same `localStorage` keys are still read.
-
-This is also a meaningful security improvement. Previously, anyone who could reach port 8595 could download your entire KaraKeep database (`GET /db.db`), and the old Python server added `Access-Control-Allow-Origin: *` to *every* response, so any website you visited could read it cross-origin and overwrite your config through an unauthenticated `POST /api/preferences`. None of that exists now.
 
 ## Development
 
@@ -258,7 +270,12 @@ confirm it cannot inject code into the generated `env.js`.
 
 GNU GPL v3 — see the LICENSE file.
 
+## Fork
+
+This project is a fork of [CodeJawn/karakeep-homedash](https://github.com/CodeJawn/karakeep-homedash).
+
 ## Acknowledgments
 
+- Forked from [CodeJawn/karakeep-homedash](https://github.com/CodeJawn/karakeep-homedash)
 - Built to complement the amazing [KaraKeep](https://github.com/karakeep-app/karakeep)
 - Drag & drop by [SortableJS](https://github.com/SortableJS/Sortable)
