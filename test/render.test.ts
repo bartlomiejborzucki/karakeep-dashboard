@@ -286,3 +286,23 @@ test('renderGrid supports default and overridden collapse states', () => {
     assert.equal(overridden.includes('class="list-section is-collapsed"'), false);
     assert.equal(overridden.includes('class="nested-list-1 is-collapsed"'), true);
 });
+
+test('renderGrid supports editMode markup and normal mode markup', () => {
+    const b = bm('b1', 'Test Bookmark', 'https://b.example');
+    const node = listNode('l1', [b]);
+
+    const normalHtml = renderGrid([[node]], { editMode: false }).html;
+    assert.equal(normalHtml.includes('data-bookmark-id="b1"'), true);
+    assert.equal(normalHtml.includes('class="bookmark-item is-editable"'), false);
+    assert.equal(normalHtml.includes('bookmark-drag-handle'), false);
+    assert.equal(normalHtml.includes('bookmark-edit-actions'), false);
+
+    const editHtml = renderGrid([[node]], { editMode: true }).html;
+    assert.equal(editHtml.includes('data-bookmark-id="b1"'), true);
+    assert.equal(editHtml.includes('class="bookmark-item is-editable"'), true);
+    assert.equal(editHtml.includes('bookmark-drag-handle'), true);
+    assert.equal(editHtml.includes('bookmark-edit-actions'), true);
+    assert.equal(editHtml.includes('data-action="archive"'), true);
+    assert.equal(editHtml.includes('data-action="delete"'), true);
+});
+

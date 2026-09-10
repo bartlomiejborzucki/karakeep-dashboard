@@ -223,3 +223,44 @@ export function formatAgo(timestamp: number | null): string {
     const days = Math.round(hours / 24);
     return `${days} day${days === 1 ? '' : 's'} ago`;
 }
+
+export function showConfirmDialog({
+    title,
+    message,
+    confirmLabel = 'Usuń',
+    cancelLabel = 'Anuluj',
+    danger = true,
+}: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    danger?: boolean;
+}): Promise<boolean> {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'confirm-dialog-container';
+        modal.innerHTML = `
+            <div class="settings-backdrop"></div>
+            <div class="confirm-dialog" role="dialog" aria-modal="true">
+                <h3>${esc(title)}</h3>
+                <p>${esc(message)}</p>
+                <div class="confirm-actions">
+                    <button type="button" class="btn-cancel" data-choice="cancel">${esc(cancelLabel)}</button>
+                    <button type="button" class="${danger ? 'btn-danger' : 'setup-submit'}" data-choice="confirm">${esc(confirmLabel)}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const cleanup = (result: boolean) => {
+            modal.remove();
+            resolve(result);
+        };
+
+        modal.querySelector('[data-choice="cancel"]')?.addEventListener('click', () => cleanup(false));
+        modal.querySelector('[data-choice="confirm"]')?.addEventListener('click', () => cleanup(true));
+        modal.querySelector('.settings-backdrop')?.addEventListener('click', () => cleanup(false));
+    });
+}
+

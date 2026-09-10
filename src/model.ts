@@ -133,8 +133,8 @@ export function sortBookmarks(bookmarks: readonly Bookmark[]): Bookmark[] {
  *    that ran inside both the root filter and every renderList call;
  *  - a `visited` guard, because a parentId cycle previously hung the browser.
  */
-export function buildTree(snapshot: Snapshot, options: { includeSmartLists?: boolean } = {}): ListNode[] {
-    const { includeSmartLists = false } = options;
+export function buildTree(snapshot: Snapshot, options: { includeSmartLists?: boolean; showEmptyLists?: boolean } = {}): ListNode[] {
+    const { includeSmartLists = false, showEmptyLists = false } = options;
     const bookmarksById = new Map(snapshot.bookmarks.map((b) => [b.id, b]));
     const nodes = new Map<string, ListNode>();
 
@@ -165,7 +165,7 @@ export function buildTree(snapshot: Snapshot, options: { includeSmartLists?: boo
         visited.add(node.id);
 
         node.children = node.children.filter((child) => markContent(child));
-        node.hasContent = node.bookmarks.length > 0 || node.children.length > 0;
+        node.hasContent = node.bookmarks.length > 0 || node.children.length > 0 || (showEmptyLists && node.type === 'manual');
         return node.hasContent;
     }
 

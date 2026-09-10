@@ -52,7 +52,14 @@ import {
     renderRemoteResults,
 } from './render.ts';
 import { buildIndex, applyFilter, attachSearch, type SearchIndex } from './search.ts';
-import { initSortable, destroySortables, readLayoutFromDom, isDragging, recentlyDragged } from './dnd.ts';
+import {
+    initSortable,
+    initBookmarkSortables,
+    destroySortables,
+    readLayoutFromDom,
+    isDragging,
+    recentlyDragged,
+} from './dnd.ts';
 import {
     renderSetup,
     renderSettings,
@@ -62,6 +69,7 @@ import {
     showBanner,
     hideBanner,
     formatAgo,
+    showConfirmDialog,
 } from './ui.ts';
 import type { ApiUser, Credentials, List, Prefs, Snapshot } from './types.ts';
 
@@ -78,6 +86,7 @@ interface AppState {
     pendingRender: Snapshot | null;
     remoteMode: boolean;
     partial: boolean;
+    editMode: boolean;
 }
 
 const state: AppState = {
@@ -90,6 +99,7 @@ const state: AppState = {
     pendingRender: null,
     remoteMode: false,
     partial: false,
+    editMode: false,
 };
 
 const renderOptions = () => ({
@@ -99,6 +109,8 @@ const renderOptions = () => ({
     collapseSublistsByDefault: state.prefs.collapseSublistsByDefault,
     showBookmarkCounts: state.prefs.showBookmarkCounts,
     collapsedOverrides: readCollapsedOverrides(),
+    editMode: state.editMode,
+    showEmptyLists: state.editMode,
 });
 
 function updateFooter(total: number, matching?: number | null): void {
@@ -120,7 +132,10 @@ function updateFooter(total: number, matching?: number | null): void {
 /* ------------------------------------------------------------------ rendering */
 
 function currentGrid(snapshot: Snapshot) {
-    const roots = buildTree(snapshot, { includeSmartLists: state.prefs.includeSmartLists });
+    const roots = buildTree(snapshot, {
+        includeSmartLists: state.prefs.includeSmartLists,
+        showEmptyLists: state.editMode,
+    });
     return renderGrid(distributeColumns(roots, state.prefs), renderOptions());
 }
 
@@ -150,7 +165,17 @@ function mountGrid(snapshot: Snapshot): boolean {
     else updateFooter(snapshot.bookmarks.length);
     window.scrollTo(0, scrollY);
 
-    idle(() => initSortable(content(), persistLayout));
+    if (state.editMode) {
+        idle(() =>
+            initBookmarkSortables(content(), {
+                onMoveBookmark: handleMoveBookmark,
+                onArchiveBookmark: handleArchiveBookmark,
+                onDeleteBookmark: handleDeleteBookmark,
+            })
+        );
+    } else {
+        idle(() => initSortable(content(), persistLayout));
+    }
     return true;
 }
 
@@ -183,6 +208,139 @@ function persistLayout(): void {
         const { html, items } = currentGrid(state.snapshot);
         state.mountedHtml = html;
         state.index = buildIndex(content(), items);
+    }
+}
+
+/* ----------------------------------------------------------------- edit mode */
+
+function toggleEditMode(): void {
+    if (state.remoteMode) exitRemoteMode();
+    state.editMode = !state.editMode;
+
+    const btn = document.getElementById('editModeButton');
+    const bar = document.getElementById('editActionBar');
+
+    if (btn) {
+        btn.classList.toggle('is-active', state.editMode);
+        btn.setAttribute('title', state.editMode ? 'Zakończ edycję' : 'Tryb edycji');
+        btn.setAttribute('aria-label', state.editMode ? 'Zakończ edycję' : 'Włącz tryb edycji');
+    }
+
+    if (bar) {
+        bar.hidden = !state.editMode;
+    }
+
+    document.body.classList.toggle('edit-mode-active', state.editMode);
+
+    state.mountedHtml = '';
+    if (state.snapshot) {
+        mountGrid(state.snapshot);
+    }
+}
+
+async function handleMoveBookmark(bookmarkId: string, fromListId: string, toListId: string): Promise<void> {
+    if (!state.creds || !state.snapshot) return;
+
+    const snapshot = state.snapshot;
+    const fromMembership = snapshot.membership[fromListId] ?? [];
+    const toMembership = snapshot.membership[toListId] ?? [];
+
+    snapshot.membership[fromListId] = fromMembership.filter((id) => id !== bookmarkId);
+    if (!toMembership.includes(bookmarkId)) {
+        snapshot.membership[toListId] = [...toMembership, bookmarkId];
+    }
+
+    await writeSnapshot(snapshot);
+    state.mountedHtml = '';
+    mountGrid(snapshot);
+
+    const toListName = snapshot.lists.find((l) => l.id === toListId)?.name ?? 'listy';
+    showToast(`Przeniesiono zakładkę do „${toListName}”.`);
+
+    try {
+        const client = createClient(state.creds);
+        await client.addBookmarkToList(toListId, bookmarkId);
+        await client.removeBookmarkFromList(fromListId, bookmarkId);
+    } catch (err) {
+        showToast(`Błąd przenoszenia: ${(err as Error).message}`, { kind: 'warn' });
+        await revalidate({ force: true });
+    }
+}
+
+async function handleArchiveBookmark(bookmarkId: string, fromListId: string): Promise<void> {
+    if (!state.creds || !state.snapshot) return;
+
+    const snapshot = state.snapshot;
+    const bm = snapshot.bookmarks.find((b) => b.id === bookmarkId);
+    const title = bm?.title ?? 'zakładkę';
+
+    const fromMembership = snapshot.membership[fromListId] ?? [];
+    snapshot.membership[fromListId] = fromMembership.filter((id) => id !== bookmarkId);
+
+    let inOtherList = false;
+    for (const [lId, ids] of Object.entries(snapshot.membership)) {
+        if (lId !== fromListId && ids.includes(bookmarkId)) {
+            inOtherList = true;
+            break;
+        }
+    }
+    if (!inOtherList) {
+        snapshot.bookmarks = snapshot.bookmarks.filter((b) => b.id !== bookmarkId);
+    }
+
+    await writeSnapshot(snapshot);
+    state.mountedHtml = '';
+    mountGrid(snapshot);
+    updateFooter(snapshot.bookmarks.length);
+    showToast(`Zarchiwizowano „${title}”.`);
+
+    try {
+        const client = createClient(state.creds);
+        await client.archiveBookmark(bookmarkId);
+    } catch (err) {
+        showToast(`Błąd archiwizacji: ${(err as Error).message}`, { kind: 'warn' });
+        await revalidate({ force: true });
+    }
+}
+
+async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): Promise<void> {
+    if (!state.creds || !state.snapshot) return;
+
+    const snapshot = state.snapshot;
+    const bm = snapshot.bookmarks.find((b) => b.id === bookmarkId);
+    const title = bm?.title ?? 'tę zakładkę';
+
+    const confirmed = await showConfirmDialog({
+        title: 'Usunąć zakładkę?',
+        message: `Czy na pewno chcesz trwale usunąć „${title}”? Tej operacji nie można cofnąć.`,
+        confirmLabel: 'Usuń',
+        cancelLabel: 'Anuluj',
+        danger: true,
+    });
+
+    if (!confirmed) {
+        state.mountedHtml = '';
+        mountGrid(snapshot);
+        return;
+    }
+
+    for (const lId of Object.keys(snapshot.membership)) {
+        snapshot.membership[lId] = (snapshot.membership[lId] ?? []).filter((id) => id !== bookmarkId);
+    }
+    snapshot.bookmarks = snapshot.bookmarks.filter((b) => b.id !== bookmarkId);
+
+    await writeSnapshot(snapshot);
+    state.mountedHtml = '';
+    mountGrid(snapshot);
+    updateFooter(snapshot.bookmarks.length);
+    showToast(`Usunięto „${title}”.`);
+
+    try {
+        const client = createClient(state.creds);
+        await client.deleteBookmark(bookmarkId);
+    } catch (err) {
+        showToast(`Błąd usuwania: ${(err as Error).message}`, { kind: 'warn' });
+        await revalidate({ force: true });
     }
 }
 
@@ -614,6 +772,14 @@ function wireChrome(): void {
     syncKarakeepLink();
 
     document.getElementById('settingsButton')?.addEventListener('click', openSettings);
+    document.getElementById('editModeButton')?.addEventListener('click', toggleEditMode);
+    document.getElementById('exitEditModeBtn')?.addEventListener('click', toggleEditMode);
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && state.editMode) {
+            toggleEditMode();
+        }
+    });
 
     const input = searchInput();
     if (input) attachSearch(input, runFilter);
@@ -626,13 +792,39 @@ function wireChrome(): void {
     });
 
     content().addEventListener('click', (event) => {
-        const action = (event.target as Element | null)?.closest<HTMLElement>('[data-action]');
+        const target = event.target as Element | null;
+
+        // In edit mode: intercept bookmark item actions and clicks
+        if (state.editMode) {
+            const actionBtn = target?.closest<HTMLElement>('.bookmark-action-btn');
+            if (actionBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+                const action = actionBtn.dataset['action'];
+                const bmItem = actionBtn.closest<HTMLElement>('.bookmark-item');
+                const bookmarkId = bmItem?.dataset['bookmarkId'];
+                const listGrid = bmItem?.closest<HTMLElement>('.bookmark-grid');
+                const listId = listGrid?.dataset['listId'];
+                if (bookmarkId && listId) {
+                    if (action === 'archive') void handleArchiveBookmark(bookmarkId, listId);
+                    else if (action === 'delete') void handleDeleteBookmark(bookmarkId, listId);
+                }
+                return;
+            }
+
+            const bmItem = target?.closest('.bookmark-item');
+            if (bmItem) {
+                event.preventDefault();
+                return;
+            }
+        }
+
+        const action = target?.closest<HTMLElement>('[data-action]');
         if (action?.dataset['action'] === 'close-remote') {
             exitRemoteMode();
             return;
         }
 
-        const target = event.target as Element | null;
         const header = target?.closest<HTMLElement>('.list-header');
         if (!header) return;
 

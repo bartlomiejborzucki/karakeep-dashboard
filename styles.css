@@ -1024,3 +1024,345 @@ button.karakeep-link {
     border-top: 1px solid var(--border-secondary);
     margin-top: var(--spacing-2xl);
 }
+
+/* Edit Mode Styles */
+#editModeButton.is-active {
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-color: var(--accent-primary);
+}
+
+body.edit-mode-active {
+    padding-bottom: 90px;
+}
+
+.bookmark-item.is-editable {
+    cursor: grab;
+    user-select: none;
+}
+
+.bookmark-item.is-editable:active {
+    cursor: grabbing;
+}
+
+.bookmark-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    cursor: grab;
+    opacity: 0.5;
+    margin-right: 2px;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.bookmark-item:hover .bookmark-drag-handle {
+    opacity: 1;
+    color: var(--accent-primary);
+}
+
+.bookmark-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: var(--spacing-xs);
+    flex-shrink: 0;
+}
+
+.bookmark-action-btn {
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    opacity: 0.7;
+}
+
+.bookmark-action-btn:hover {
+    opacity: 1;
+}
+
+.bookmark-action-btn.btn-archive:hover {
+    color: #d68910;
+    background: rgba(243, 156, 18, 0.15);
+}
+
+.bookmark-action-btn.btn-delete:hover {
+    color: var(--error-color);
+    background: rgba(214, 48, 49, 0.15);
+}
+
+.bookmark-ghost {
+    opacity: 0.35;
+    background: var(--accent-focus) !important;
+    border: 1px dashed var(--accent-primary) !important;
+    border-radius: var(--radius-sm);
+}
+
+.bookmark-drag {
+    opacity: 0.95;
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+    background: var(--bg-secondary) !important;
+}
+
+.bookmark-chosen {
+    background: var(--bg-tertiary);
+}
+
+.bookmark-grid.is-empty {
+    display: none;
+}
+
+body.edit-mode-active .bookmark-grid.is-empty {
+    display: flex;
+    min-height: 44px;
+    border: 2px dashed var(--border-secondary);
+    border-radius: var(--radius-md);
+    align-items: center;
+    justify-content: center;
+    margin-top: var(--spacing-sm);
+    color: var(--text-tertiary);
+    font-size: var(--font-size-xs);
+    background: rgba(0, 0, 0, 0.02);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+body.is-dragging-bookmark .bookmark-grid {
+    min-height: 36px;
+    border-radius: var(--radius-sm);
+}
+
+body.is-dragging-bookmark .bookmark-grid.is-empty {
+    border-color: var(--accent-primary);
+    background: var(--accent-focus);
+}
+
+/* Fixed Bottom Edit Action Bar */
+.edit-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-primary);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    padding: var(--spacing-sm) var(--spacing-xl);
+    animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.edit-action-bar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-xl);
+}
+
+.edit-action-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.edit-mode-badge {
+    background: var(--accent-primary);
+    color: #ffffff;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.edit-mode-hint {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.edit-dropzones {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.dropzone {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px 18px;
+    border-radius: var(--radius-md);
+    border: 2px dashed transparent;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+    min-width: 130px;
+    justify-content: center;
+}
+
+.dropzone-archive {
+    border-color: rgba(243, 156, 18, 0.45);
+    background: rgba(243, 156, 18, 0.08);
+    color: #d68910;
+}
+
+.dropzone-archive.drag-over,
+.dropzone-archive:hover {
+    border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.22);
+    color: #b7791f;
+    transform: scale(1.04);
+    box-shadow: 0 0 12px rgba(243, 156, 18, 0.35);
+}
+
+.dropzone-trash {
+    border-color: rgba(231, 76, 60, 0.45);
+    background: rgba(231, 76, 60, 0.08);
+    color: var(--error-color);
+}
+
+.dropzone-trash.drag-over,
+.dropzone-trash:hover {
+    border-color: var(--error-color);
+    background: rgba(231, 76, 60, 0.22);
+    color: #c0392b;
+    transform: scale(1.04);
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.35);
+}
+
+body.is-dragging-bookmark .dropzone {
+    border-style: solid;
+    animation: pulseDropzone 1.5s infinite;
+}
+
+@keyframes pulseDropzone {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.btn-exit-edit {
+    padding: 8px 20px;
+    background: var(--accent-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.btn-exit-edit:hover {
+    background: var(--accent-hover);
+}
+
+/* Confirmation Dialog */
+.confirm-dialog-container {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+}
+
+.confirm-dialog {
+    position: relative;
+    z-index: 2001;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    max-width: 440px;
+    width: 100%;
+    box-shadow: var(--shadow-md);
+    animation: fadeInScale 0.2s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.confirm-dialog h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.confirm-dialog p {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+}
+
+.confirm-actions .btn-cancel {
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-secondary);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: background var(--transition-fast);
+}
+
+.confirm-actions .btn-cancel:hover {
+    background: var(--bg-tertiary);
+}
+
+.confirm-actions .btn-danger {
+    padding: 8px 18px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--error-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    transition: opacity var(--transition-fast);
+}
+
+.confirm-actions .btn-danger:hover {
+    opacity: 0.9;
+}

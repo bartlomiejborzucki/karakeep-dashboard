@@ -12,13 +12,15 @@ import Sortable from 'sortablejs';
 import type { ColumnLayout } from './types.ts';
 
 let instances: Sortable[] = [];
+let bookmarkInstances: Sortable[] = [];
 let dragging = false;
+let bookmarkDragging = false;
 let root: Element | null = null;
 
 let wasJustDragged = false;
 
 export function isDragging(): boolean {
-    return dragging;
+    return dragging || bookmarkDragging;
 }
 
 export function recentlyDragged(): boolean {
@@ -41,7 +43,38 @@ function clearHighlight(): void {
     }
 }
 
+function highlightDropTarget(target: Element | null): void {
+    const archiveZone = document.getElementById('archiveDropzone');
+    const trashZone = document.getElementById('trashDropzone');
+    if (archiveZone) {
+        archiveZone.classList.toggle('drag-over', target === archiveZone || Boolean(archiveZone?.contains(target as Node)));
+    }
+    if (trashZone) {
+        trashZone.classList.toggle('drag-over', target === trashZone || Boolean(trashZone?.contains(target as Node)));
+    }
+}
+
+function clearDropTargetHighlight(): void {
+    document.getElementById('archiveDropzone')?.classList.remove('drag-over');
+    document.getElementById('trashDropzone')?.classList.remove('drag-over');
+}
+
+export function destroyBookmarkSortables(): void {
+    clearDropTargetHighlight();
+    document.body.classList.remove('is-dragging-bookmark');
+    for (const instance of bookmarkInstances) {
+        try {
+            instance.destroy();
+        } catch {
+            /* ignore */
+        }
+    }
+    bookmarkInstances = [];
+    bookmarkDragging = false;
+}
+
 export function destroySortables(): void {
+    destroyBookmarkSortables();
     clearHighlight();
     for (const instance of instances) {
         try {
@@ -84,6 +117,106 @@ export function initSortable(container: Element, onChange: () => void): void {
                     setTimeout(() => {
                         wasJustDragged = false;
                     }, 150);
+                },
+            })
+        );
+    }
+}
+
+export interface BookmarkDndHandlers {
+    onMoveBookmark: (bookmarkId: string, fromListId: string, toListId: string) => void;
+    onArchiveBookmark: (bookmarkId: string, fromListId: string) => void;
+    onDeleteBookmark: (bookmarkId: string, fromListId: string) => void;
+}
+
+export function initBookmarkSortables(container: Element, handlers: BookmarkDndHandlers): void {
+    destroyBookmarkSortables();
+
+    for (const grid of container.querySelectorAll<HTMLElement>('.bookmark-grid')) {
+        if (grid.dataset['listType'] === 'smart') continue;
+        bookmarkInstances.push(
+            Sortable.create(grid, {
+                group: {
+                    name: 'bookmarks',
+                    pull: true,
+                    put: (to) => to.el.dataset['listType'] !== 'smart',
+                },
+                animation: 150,
+                ghostClass: 'bookmark-ghost',
+                dragClass: 'bookmark-drag',
+                chosenClass: 'bookmark-chosen',
+                filter: '.empty-list-dropzone, .bookmark-action-btn, .bookmark-edit-actions',
+                preventOnFilter: false,
+                onStart: () => {
+                    bookmarkDragging = true;
+                    wasJustDragged = true;
+                    document.body.classList.add('is-dragging-bookmark');
+                },
+                onMove: (evt) => {
+                    highlightDropTarget(evt.to);
+                },
+                onEnd: () => {
+                    bookmarkDragging = false;
+                    document.body.classList.remove('is-dragging-bookmark');
+                    clearDropTargetHighlight();
+                    setTimeout(() => {
+                        wasJustDragged = false;
+                    }, 150);
+                },
+                onAdd: (evt) => {
+                    const item = evt.item;
+                    const bookmarkId = item.dataset['bookmarkId'];
+                    const fromListId = evt.from.dataset['listId'];
+                    const toListId = evt.to.dataset['listId'];
+                    if (bookmarkId && fromListId && toListId && fromListId !== toListId) {
+                        handlers.onMoveBookmark(bookmarkId, fromListId, toListId);
+                    }
+                },
+            })
+        );
+    }
+
+    const archiveZone = document.getElementById('archiveDropzone');
+    if (archiveZone) {
+        bookmarkInstances.push(
+            Sortable.create(archiveZone, {
+                group: {
+                    name: 'bookmarks',
+                    pull: false,
+                    put: true,
+                },
+                animation: 150,
+                onAdd: (evt) => {
+                    const item = evt.item;
+                    const bookmarkId = item.dataset['bookmarkId'];
+                    const fromListId = evt.from.dataset['listId'];
+                    item.remove();
+                    if (bookmarkId && fromListId) {
+                        handlers.onArchiveBookmark(bookmarkId, fromListId);
+                    }
+                },
+            })
+        );
+    }
+
+    const trashZone = document.getElementById('trashDropzone');
+    if (trashZone) {
+        bookmarkInstances.push(
+            Sortable.create(trashZone, {
+                group: {
+                    name: 'bookmarks',
+                    pull: false,
+                    put: true,
+                },
+                animation: 150,
+                onAdd: (evt) => {
+                    const item = evt.item;
+                    const bookmarkId = item.dataset['bookmarkId'];
+                    const fromListId = evt.from.dataset['listId'];
+                    item.remove();
+                    if (bookmarkId && fromListId) {
+                        handlers.onDeleteBookmark(bookmarkId, fromListId);
+                    }
                 },
             })
         );

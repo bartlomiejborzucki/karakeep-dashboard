@@ -46,6 +46,8 @@ export interface RenderOptions {
     collapseSublistsByDefault?: boolean;
     showBookmarkCounts?: boolean;
     collapsedOverrides?: Record<string, boolean>;
+    editMode?: boolean;
+    showEmptyLists?: boolean;
 }
 
 export function countBookmarks(node: ListNode): number {
@@ -63,7 +65,7 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
     // querySelectorAll('.bookmark-item') without ever reading the DOM.
     sink.push(bookmark);
 
-    const { bookmarkTarget: target, showTags } = options;
+    const { bookmarkTarget: target, showTags, editMode } = options;
     const title = esc(bookmark.title);
     const url = esc(safeUrl(bookmark.url));
     const favicon = esc(faviconUrlFor(bookmark));
@@ -72,11 +74,24 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
 
     return `
         <a href="${url}"
-           class="bookmark-item"
+           class="bookmark-item${editMode ? ' is-editable' : ''}"
+           data-bookmark-id="${esc(bookmark.id)}"
            title="${tooltip}"
            target="${esc(target)}"
            rel="${target === '_blank' ? 'noopener noreferrer' : ''}"
            draggable="false">
+            ${editMode ? `
+                <span class="bookmark-drag-handle" title="Przeciągnij">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="5" r="1.5" fill="currentColor"></circle>
+                        <circle cx="9" cy="12" r="1.5" fill="currentColor"></circle>
+                        <circle cx="9" cy="19" r="1.5" fill="currentColor"></circle>
+                        <circle cx="15" cy="5" r="1.5" fill="currentColor"></circle>
+                        <circle cx="15" cy="12" r="1.5" fill="currentColor"></circle>
+                        <circle cx="15" cy="19" r="1.5" fill="currentColor"></circle>
+                    </svg>
+                </span>
+            ` : ''}
             <div class="bookmark-content">
                 ${favicon ? `
                     <img src="${favicon}"
@@ -91,12 +106,29 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
                 <span class="bookmark-title">${title}</span>
                 ${showTags && bookmark.tags.length ? `<span class="bookmark-tags">${bookmark.tags.map((t) => `<span class="bookmark-tag">${esc(t)}</span>`).join('')}</span>` : ''}
             </div>
+            ${editMode ? `
+                <div class="bookmark-edit-actions">
+                    <button type="button" class="bookmark-action-btn btn-archive" data-action="archive" title="Przenieś do archiwum" aria-label="Archiwizuj">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                            <rect x="1" y="3" width="22" height="5"></rect>
+                            <line x1="10" y1="12" x2="14" y2="12"></line>
+                        </svg>
+                    </button>
+                    <button type="button" class="bookmark-action-btn btn-delete" data-action="delete" title="Usuń" aria-label="Usuń">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            ` : ''}
         </a>
     `;
 }
 
 function renderList(list: ListNode, options: Required<RenderOptions>, sink: Bookmark[], level = 0): string {
-    if (!list.hasContent) return '';
+    if (!list.hasContent && !options.showEmptyLists) return '';
     const isSublist = level > 0;
     const isCollapsed = list.id in options.collapsedOverrides
         ? Boolean(options.collapsedOverrides[list.id])
@@ -109,7 +141,7 @@ function renderList(list: ListNode, options: Required<RenderOptions>, sink: Book
     // Note: the depth cap applies to the *class name* only — deeper lists still
     // render, styled as nested-list-2. That is the existing behaviour, kept as-is.
     return `
-        <div class="${listClass}${isCollapsed ? ' is-collapsed' : ''}" data-list-id="${esc(list.id)}">
+        <div class="${listClass}${isCollapsed ? ' is-collapsed' : ''}" data-list-id="${esc(list.id)}" data-list-type="${esc(list.type)}">
             <div class="list-header">
                 <button type="button"
                         class="list-collapse-btn"
@@ -124,7 +156,10 @@ function renderList(list: ListNode, options: Required<RenderOptions>, sink: Book
                 <h${headingLevel} class="list-title">${esc(list.name)}</h${headingLevel}>
                 ${options.showBookmarkCounts ? `<span class="list-count" title="${count} ${count === 1 ? 'bookmark' : 'bookmarks'}">${count}</span>` : ''}
             </div>
-            ${list.bookmarks.length > 0 ? `<div class="bookmark-grid">${list.bookmarks.map((b) => renderBookmark(b, options, sink)).join('')}</div>` : ''}
+            <div class="bookmark-grid${list.bookmarks.length === 0 ? ' is-empty' : ''}" data-list-id="${esc(list.id)}" data-list-type="${esc(list.type)}">
+                ${list.bookmarks.map((b) => renderBookmark(b, options, sink)).join('')}
+                ${list.bookmarks.length === 0 ? `<div class="empty-list-dropzone"><span>Brak zakładek</span></div>` : ''}
+            </div>
             ${list.children.map((child) => renderList(child, options, sink, Math.min(level + 1, 2))).join('')}
         </div>
     `;
@@ -192,6 +227,8 @@ export function renderGrid(columns: readonly ListNode[][], options: RenderOption
         collapseSublistsByDefault: options.collapseSublistsByDefault ?? false,
         showBookmarkCounts: options.showBookmarkCounts ?? true,
         collapsedOverrides: options.collapsedOverrides ?? {},
+        editMode: options.editMode ?? false,
+        showEmptyLists: options.showEmptyLists ?? false,
     };
     const items: Bookmark[] = [];
 
@@ -238,6 +275,8 @@ export function renderRemoteResults(bookmarks: readonly Bookmark[], query: strin
         collapseSublistsByDefault: options.collapseSublistsByDefault ?? false,
         showBookmarkCounts: options.showBookmarkCounts ?? true,
         collapsedOverrides: options.collapsedOverrides ?? {},
+        editMode: options.editMode ?? false,
+        showEmptyLists: options.showEmptyLists ?? false,
     };
     const items: Bookmark[] = [];
 

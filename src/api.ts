@@ -92,20 +92,41 @@ export interface KarakeepClient {
     getLists(): Promise<ApiList[]>;
     getListBookmarks(listId: string): Promise<ApiBookmark[]>;
     searchBookmarks(query: string): Promise<ApiBookmark[]>;
+    addBookmarkToList(listId: string, bookmarkId: string): Promise<void>;
+    removeBookmarkFromList(listId: string, bookmarkId: string): Promise<void>;
+    deleteBookmark(bookmarkId: string): Promise<void>;
+    archiveBookmark(bookmarkId: string): Promise<void>;
+}
+
+export interface RequestOptions {
+    method?: string;
+    body?: unknown;
+    retryOn429?: boolean;
 }
 
 export function createClient({ baseUrl, apiKey }: { baseUrl: string; apiKey: string }): KarakeepClient {
     const root = `${baseUrl}/api/v1`;
 
-    async function request<T>(path: string, retryOn429 = true): Promise<T> {
+    async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+        const { method = 'GET', body, retryOn429 = true } = options;
         if (isMixedContent(baseUrl)) {
             throw new ApiError('mixed-content', 'Blocked: an https:// page cannot call an http:// API.');
+        }
+
+        const headers: Record<string, string> = {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: 'application/json',
+        };
+        if (body !== undefined) {
+            headers['Content-Type'] = 'application/json';
         }
 
         let res: Response;
         try {
             res = await fetch(`${root}${path}`, {
-                headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+                method,
+                headers,
+                body: body !== undefined ? JSON.stringify(body) : undefined,
                 signal: timeoutSignal(REQUEST_TIMEOUT_MS),
                 credentials: 'omit',
                 cache: 'no-store',
@@ -126,7 +147,7 @@ export function createClient({ baseUrl, apiKey }: { baseUrl: string; apiKey: str
             if (retryOn429) {
                 const wait = Math.min(10_000, (parseFloat(res.headers.get('Retry-After') ?? '') || 2) * 1000);
                 await sleep(wait);
-                return request<T>(path, false);
+                return request<T>(path, { method, body, retryOn429: false });
             }
             throw new ApiError('rate-limit', 'Karakeep is rate limiting requests.', 429);
         }
@@ -134,8 +155,17 @@ export function createClient({ baseUrl, apiKey }: { baseUrl: string; apiKey: str
             throw new ApiError('server', `Karakeep returned ${res.status}.`, res.status);
         }
 
+        if (res.status === 204) {
+            return undefined as T;
+        }
+
+        const text = await res.text();
+        if (!text) {
+            return undefined as T;
+        }
+
         try {
-            return (await res.json()) as T;
+            return JSON.parse(text) as T;
         } catch {
             throw new ApiError('bad-response', 'Karakeep returned a response that was not JSON.');
         }
@@ -188,6 +218,31 @@ export function createClient({ baseUrl, apiKey }: { baseUrl: string; apiKey: str
                 }),
                 1
             );
+        },
+
+        addBookmarkToList(listId, bookmarkId) {
+            return request<void>(
+                `/lists/${encodeURIComponent(listId)}/bookmarks/${encodeURIComponent(bookmarkId)}`,
+                { method: 'PUT' }
+            );
+        },
+
+        removeBookmarkFromList(listId, bookmarkId) {
+            return request<void>(
+                `/lists/${encodeURIComponent(listId)}/bookmarks/${encodeURIComponent(bookmarkId)}`,
+                { method: 'DELETE' }
+            );
+        },
+
+        deleteBookmark(bookmarkId) {
+            return request<void>(`/bookmarks/${encodeURIComponent(bookmarkId)}`, { method: 'DELETE' });
+        },
+
+        archiveBookmark(bookmarkId) {
+            return request<void>(`/bookmarks/${encodeURIComponent(bookmarkId)}`, {
+                method: 'PATCH',
+                body: { archived: true },
+            });
         },
     };
 }

@@ -222,3 +222,17 @@ test('computeFingerprint changes when a bookmark is added', () => {
     const after = { numBookmarks: 11, bookmarksByType: { link: 11 } };
     assert.notEqual(computeFingerprint(before, lists), computeFingerprint(after, lists));
 });
+
+test('buildTree preserves empty manual lists when showEmptyLists is true', () => {
+    const emptyManual: List = { id: 'm', name: 'Empty Manual', icon: null, parentId: null, type: 'manual' };
+    const emptySmart: List = { id: 's', name: 'Empty Smart', icon: null, parentId: null, type: 'smart' };
+    const snap = snapshotOf([emptyManual, emptySmart], {}, []);
+
+    const defaultTree = buildTree(snap, { includeSmartLists: true });
+    assert.equal(defaultTree.length, 0);
+
+    const editModeTree = buildTree(snap, { includeSmartLists: true, showEmptyLists: true });
+    assert.equal(editModeTree.length, 1);
+    assert.equal(editModeTree[0]?.id, 'm');
+});
+
