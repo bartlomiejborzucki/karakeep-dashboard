@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { esc, safeUrl, faviconUrlFor, distributeColumns, renderGrid } from '../src/render.ts';
+import { esc, safeUrl, faviconUrlFor, distributeColumns, renderGrid, countBookmarks } from '../src/render.ts';
 import { buildTree, normalizeBookmark } from '../src/model.ts';
 import { DEFAULT_COLUMNS, SCHEMA_VERSION } from '../src/config.ts';
 import type { Bookmark, ListNode, Prefs, Snapshot } from '../src/types.ts';
@@ -229,4 +229,60 @@ test('end to end: an API payload renders the expected card', () => {
     assert.equal(html.includes('Self-hosting'), true);
     assert.equal(html.includes('href="https://karakeep.app"'), true);
     assert.equal(html.includes('>Karakeep<'), true);
+});
+
+test('countBookmarks counts unique bookmarks including descendants', () => {
+    const b1 = bm('b1', 'One', 'https://1.example');
+    const b2 = bm('b2', 'Two', 'https://2.example');
+    const b3 = bm('b3', 'Three', 'https://3.example');
+    const child = listNode('c', [b2, b3]);
+    const parent = listNode('p', [b1, b2], [child]);
+
+    assert.equal(countBookmarks(child), 2);
+    assert.equal(countBookmarks(parent), 3);
+});
+
+test('renderGrid displays bookmark counts on lists and sublists', () => {
+    const b1 = bm('b1', 'One', 'https://1.example');
+    const b2 = bm('b2', 'Two', 'https://2.example');
+    const child = listNode('c', [b2]);
+    const parent = listNode('p', [b1], [child]);
+
+    const withCounts = renderGrid([[parent]], { showBookmarkCounts: true }).html;
+    assert.equal(withCounts.includes('<span class="list-count" title="2 bookmarks">2</span>'), true);
+    assert.equal(withCounts.includes('<span class="list-count" title="1 bookmark">1</span>'), true);
+
+    const withoutCounts = renderGrid([[parent]], { showBookmarkCounts: false }).html;
+    assert.equal(withoutCounts.includes('class="list-count"'), false);
+});
+
+test('renderGrid supports default and overridden collapse states', () => {
+    const b1 = bm('b1', 'One', 'https://1.example');
+    const b2 = bm('b2', 'Two', 'https://2.example');
+    const child = listNode('c', [b2]);
+    const parent = listNode('p', [b1], [child]);
+
+    // Default: expanded
+    const def = renderGrid([[parent]]).html;
+    assert.equal(def.includes('class="list-section is-collapsed"'), false);
+    assert.equal(def.includes('class="nested-list-1 is-collapsed"'), false);
+    assert.equal(def.includes('aria-expanded="true"'), true);
+
+    // Collapse lists by default
+    const collapsedLists = renderGrid([[parent]], { collapseListsByDefault: true }).html;
+    assert.equal(collapsedLists.includes('class="list-section is-collapsed"'), true);
+    assert.equal(collapsedLists.includes('class="nested-list-1 is-collapsed"'), false);
+
+    // Collapse sublists by default
+    const collapsedSublists = renderGrid([[parent]], { collapseSublistsByDefault: true }).html;
+    assert.equal(collapsedSublists.includes('class="list-section is-collapsed"'), false);
+    assert.equal(collapsedSublists.includes('class="nested-list-1 is-collapsed"'), true);
+
+    // Explicit overrides take precedence
+    const overridden = renderGrid([[parent]], {
+        collapseListsByDefault: true,
+        collapsedOverrides: { p: false, c: true },
+    }).html;
+    assert.equal(overridden.includes('class="list-section is-collapsed"'), false);
+    assert.equal(overridden.includes('class="nested-list-1 is-collapsed"'), true);
 });

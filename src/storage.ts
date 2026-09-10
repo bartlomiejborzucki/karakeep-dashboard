@@ -64,6 +64,9 @@ const DEFAULT_PREFS: Prefs = {
     includeSmartLists: false,
     numColumns: DEFAULT_COLUMNS,
     showTags: false,
+    collapseListsByDefault: false,
+    collapseSublistsByDefault: false,
+    showBookmarkCounts: true,
 };
 
 let migrated = false;
@@ -127,4 +130,28 @@ export function serverId(baseUrl: string, userId: string | null): string {
         h = ((h << 5) + h + input.charCodeAt(i)) | 0;
     }
     return (h >>> 0).toString(16);
+}
+
+export function readCollapsedOverrides(): Record<string, boolean> {
+    return readJson<Record<string, boolean>>(KEYS.collapsed) ?? {};
+}
+
+export function writeCollapsedOverrides(overrides: Record<string, boolean>): void {
+    writeJson(KEYS.collapsed, overrides);
+}
+
+export function clearCollapsedOverrides(): void {
+    removeKey(KEYS.collapsed);
+}
+
+export function isListCollapsed(
+    listId: string,
+    isSublist: boolean,
+    prefs: Pick<Prefs, 'collapseListsByDefault' | 'collapseSublistsByDefault'>,
+    overrides: Record<string, boolean>
+): boolean {
+    if (listId in overrides) {
+        return Boolean(overrides[listId]);
+    }
+    return isSublist ? prefs.collapseSublistsByDefault : prefs.collapseListsByDefault;
 }

@@ -137,6 +137,9 @@ export interface Prefs {
     includeSmartLists: boolean;
     numColumns: number;
     showTags: boolean;
+    collapseListsByDefault: boolean;
+    collapseSublistsByDefault: boolean;
+    showBookmarkCounts: boolean;
 }
 
 export interface ErrorInfo {

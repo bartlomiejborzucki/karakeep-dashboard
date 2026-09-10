@@ -16,6 +16,7 @@ A compact, home-page style dashboard for browsing your [KaraKeep](https://github
 - 📴 **Works offline** — the last view stays available when Karakeep is unreachable
 - 📱 **Responsive** — desktop, tablet and mobile
 - 🏷️ **Tags & descriptions** — searchable always, shown on cards when you want them
+- 📂 **Collapsible lists & sublists** — collapse/expand lists and sublists with one click, with bookmark count badges
 - 🔒 **No backend** — your API key lives in your browser and is sent only to your own Karakeep
 
 ## Quick start
@@ -152,7 +153,11 @@ Even when KaraKeep runs on the same NAS, keep `KARAKEEP_URL` as the LAN address:
 | Open in new tab | ⚙ settings | `target="_blank"` for bookmark links |
 | Show tags | ⚙ settings | Off by default. Tags are searchable either way. |
 | Include smart lists | ⚙ settings | Off by default |
+| Collapse lists by default | ⚙ settings | Off by default |
+| Collapse sublists by default | ⚙ settings | Off by default |
+| Show bookmark count on lists | ⚙ settings | On by default |
 | Column layout | drag & drop | Saved automatically |
+| Collapsed list states | click header / toggle | Saved automatically per list |
 
 The ⚙ menu also offers **Refresh now**, **Clear cache** and **Sign out**.
 

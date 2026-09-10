@@ -15,8 +15,14 @@ let instances: Sortable[] = [];
 let dragging = false;
 let root: Element | null = null;
 
+let wasJustDragged = false;
+
 export function isDragging(): boolean {
     return dragging;
+}
+
+export function recentlyDragged(): boolean {
+    return wasJustDragged;
 }
 
 // `add`/`remove` only fire on drop, so they cannot drive a hover indicator: they
@@ -46,6 +52,7 @@ export function destroySortables(): void {
     }
     instances = [];
     dragging = false;
+    wasJustDragged = false;
     root = null;
 }
 
@@ -60,8 +67,11 @@ export function initSortable(container: Element, onChange: () => void): void {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 dragClass: 'sortable-drag',
+                filter: '.list-collapse-btn, .list-collapse-btn *, a, .bookmark-item',
+                preventOnFilter: false,
                 onStart: (evt) => {
                     dragging = true;
+                    wasJustDragged = true;
                     highlight(evt.from);
                 },
                 onMove: (evt) => {
@@ -71,6 +81,9 @@ export function initSortable(container: Element, onChange: () => void): void {
                     dragging = false;
                     clearHighlight();
                     onChange();
+                    setTimeout(() => {
+                        wasJustDragged = false;
+                    }, 150);
                 },
             })
         );

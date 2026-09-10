@@ -133,6 +133,18 @@ export function renderSettings({ baseUrl, hasKey, prefs, status }: SettingsState
                     <input type="checkbox" id="settingsSmart" ${prefs.includeSmartLists ? 'checked' : ''}>
                     <span>Include smart lists</span>
                 </label>
+                <label class="settings-check">
+                    <input type="checkbox" id="settingsCollapseLists" ${prefs.collapseListsByDefault ? 'checked' : ''}>
+                    <span>Collapse lists by default</span>
+                </label>
+                <label class="settings-check">
+                    <input type="checkbox" id="settingsCollapseSublists" ${prefs.collapseSublistsByDefault ? 'checked' : ''}>
+                    <span>Collapse sublists by default</span>
+                </label>
+                <label class="settings-check">
+                    <input type="checkbox" id="settingsShowCounts" ${prefs.showBookmarkCounts ? 'checked' : ''}>
+                    <span>Show bookmark count on lists</span>
+                </label>
                 <button type="submit" class="setup-submit">Save</button>
             </form>
             <div class="settings-actions">

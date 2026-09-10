@@ -250,11 +250,46 @@ body {
     margin-bottom: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
     border-bottom: 1px solid var(--border-primary);
+    cursor: pointer;
+    user-select: none;
+    transition: margin-bottom var(--transition-fast), padding-bottom var(--transition-fast), border-color var(--transition-fast);
+}
+
+.list-collapse-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    margin-left: -4px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.list-collapse-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.list-collapse-btn .chevron-icon {
+    transition: transform var(--transition-fast);
+    transform: rotate(0deg);
+}
+
+.is-collapsed > .list-header .list-collapse-btn .chevron-icon {
+    transform: rotate(-90deg);
 }
 
 .list-icon {
     font-size: var(--font-size-xl);
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .list-title {
@@ -262,6 +297,66 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-count {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    line-height: 1.3;
+    flex-shrink: 0;
+    user-select: none;
+    transition: background-color var(--transition-fast);
+}
+
+.list-section:hover .list-count {
+    background: var(--border-primary);
+}
+
+/* Collapsed state */
+.list-section.is-collapsed {
+    padding-bottom: var(--spacing-lg);
+}
+
+.list-section.is-collapsed > .list-header,
+.nested-list-1.is-collapsed > .list-header,
+.nested-list-2.is-collapsed > .list-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom-color: transparent;
+}
+
+.is-collapsed > .bookmark-grid,
+.is-collapsed > .nested-list-1,
+.is-collapsed > .nested-list-2 {
+    display: none !important;
+}
+
+/* While searching, auto-expand so matching bookmarks are visible */
+.grid-container.is-filtering .is-collapsed > .bookmark-grid {
+    display: grid !important;
+}
+
+.grid-container.is-filtering .is-collapsed > .nested-list-1,
+.grid-container.is-filtering .is-collapsed > .nested-list-2 {
+    display: block !important;
+}
+
+.grid-container.is-filtering .is-collapsed > .list-header {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.grid-container.is-filtering .is-collapsed > .list-header .list-collapse-btn .chevron-icon {
+    transform: rotate(0deg);
 }
 
 /* Bookmark grid */
@@ -283,12 +378,22 @@ body {
     transition: all var(--transition-fast);
     cursor: pointer;
     overflow: hidden;
+    width: 100%;
+    min-width: 0;
 }
 
 .bookmark-item:hover {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
     transform: translateX(2px);
+}
+
+.bookmark-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    min-width: 0;
 }
 
 .bookmark-favicon {
@@ -300,6 +405,7 @@ body {
 
 .bookmark-title {
     flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -784,22 +890,9 @@ button.karakeep-link {
     min-width: 185px;
 }
 
-/* .bookmark-content is a plain block, so the ellipsis declared on .bookmark-title
-   has never actually applied — long titles are hard-clipped by the anchor's
-   overflow:hidden. That only becomes noticeable in narrow columns, so the fix is
-   scoped there: turning it on everywhere would shift the favicon/title gap on
-   every row. */
 .grid-container.cols-5 .bookmark-content,
 .grid-container.cols-6 .bookmark-content {
-    display: flex;
-    align-items: center;
     gap: var(--spacing-xs);
-    min-width: 0;
-}
-
-.grid-container.cols-5 .bookmark-title,
-.grid-container.cols-6 .bookmark-title {
-    min-width: 0;
 }
 
 /* Tags on bookmarks (opt-in in settings, off by default so the dense default
@@ -919,4 +1012,15 @@ button.karakeep-link {
     font-size: var(--font-size-md);
     text-align: center;
     padding: var(--spacing-xl) 0;
+}
+
+/* Dashboard footer (total bookmark count) */
+.dashboard-footer {
+    text-align: center;
+    padding: var(--spacing-2xl) 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    user-select: none;
+    border-top: 1px solid var(--border-secondary);
+    margin-top: var(--spacing-2xl);
 }

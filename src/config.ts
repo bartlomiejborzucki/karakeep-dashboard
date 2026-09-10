@@ -21,6 +21,7 @@ export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const KEYS = {
     creds: 'kkhd.credentials',
     prefs: 'kkhd.prefs',
+    collapsed: 'kkhd.collapsed',
     legacyLayout: 'karakeep-column-layout',
     legacyOrder: 'karakeep-column-order',
 } as const;

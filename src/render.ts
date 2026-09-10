@@ -42,6 +42,20 @@ export function faviconUrlFor(bookmark: Pick<Bookmark, 'favicon' | 'url'>): stri
 export interface RenderOptions {
     bookmarkTarget?: Prefs['bookmarkTarget'];
     showTags?: boolean;
+    collapseListsByDefault?: boolean;
+    collapseSublistsByDefault?: boolean;
+    showBookmarkCounts?: boolean;
+    collapsedOverrides?: Record<string, boolean>;
+}
+
+export function countBookmarks(node: ListNode): number {
+    const ids = new Set<string>();
+    function collect(n: ListNode) {
+        for (const b of n.bookmarks) ids.add(b.id);
+        for (const child of n.children) collect(child);
+    }
+    collect(node);
+    return ids.size;
 }
 
 function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, sink: Bookmark[]): string {
@@ -83,16 +97,32 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
 
 function renderList(list: ListNode, options: Required<RenderOptions>, sink: Bookmark[], level = 0): string {
     if (!list.hasContent) return '';
+    const isSublist = level > 0;
+    const isCollapsed = list.id in options.collapsedOverrides
+        ? Boolean(options.collapsedOverrides[list.id])
+        : (isSublist ? options.collapseSublistsByDefault : options.collapseListsByDefault);
+
     const listClass = level === 0 ? 'list-section' : `nested-list-${level}`;
     const headingLevel = Math.min(level + 2, 6);
+    const count = countBookmarks(list);
 
     // Note: the depth cap applies to the *class name* only — deeper lists still
     // render, styled as nested-list-2. That is the existing behaviour, kept as-is.
     return `
-        <div class="${listClass}" data-list-id="${esc(list.id)}">
+        <div class="${listClass}${isCollapsed ? ' is-collapsed' : ''}" data-list-id="${esc(list.id)}">
             <div class="list-header">
+                <button type="button"
+                        class="list-collapse-btn"
+                        aria-label="Toggle ${esc(list.name)}"
+                        aria-expanded="${isCollapsed ? 'false' : 'true'}"
+                        title="${isCollapsed ? 'Expand' : 'Collapse'}">
+                    <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
                 <span class="list-icon">${esc(list.icon)}</span>
                 <h${headingLevel} class="list-title">${esc(list.name)}</h${headingLevel}>
+                ${options.showBookmarkCounts ? `<span class="list-count" title="${count} ${count === 1 ? 'bookmark' : 'bookmarks'}">${count}</span>` : ''}
             </div>
             ${list.bookmarks.length > 0 ? `<div class="bookmark-grid">${list.bookmarks.map((b) => renderBookmark(b, options, sink)).join('')}</div>` : ''}
             ${list.children.map((child) => renderList(child, options, sink, Math.min(level + 1, 2))).join('')}
@@ -158,6 +188,10 @@ export function renderGrid(columns: readonly ListNode[][], options: RenderOption
     const resolved: Required<RenderOptions> = {
         bookmarkTarget: options.bookmarkTarget ?? '_self',
         showTags: options.showTags ?? false,
+        collapseListsByDefault: options.collapseListsByDefault ?? false,
+        collapseSublistsByDefault: options.collapseSublistsByDefault ?? false,
+        showBookmarkCounts: options.showBookmarkCounts ?? true,
+        collapsedOverrides: options.collapsedOverrides ?? {},
     };
     const items: Bookmark[] = [];
 
@@ -200,6 +234,10 @@ export function renderRemoteResults(bookmarks: readonly Bookmark[], query: strin
     const resolved: Required<RenderOptions> = {
         bookmarkTarget: options.bookmarkTarget ?? '_self',
         showTags: options.showTags ?? false,
+        collapseListsByDefault: options.collapseListsByDefault ?? false,
+        collapseSublistsByDefault: options.collapseSublistsByDefault ?? false,
+        showBookmarkCounts: options.showBookmarkCounts ?? true,
+        collapsedOverrides: options.collapsedOverrides ?? {},
     };
     const items: Bookmark[] = [];
 

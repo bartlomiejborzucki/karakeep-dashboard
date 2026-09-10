@@ -21,6 +21,10 @@ import {
     updatePrefs,
     clampColumns,
     serverId,
+    readCollapsedOverrides,
+    writeCollapsedOverrides,
+    clearCollapsedOverrides,
+    isListCollapsed,
 } from './storage.ts';
 import { readSnapshot, writeSnapshot, clearCache } from './cache.ts';
 import {
@@ -48,7 +52,7 @@ import {
     renderRemoteResults,
 } from './render.ts';
 import { buildIndex, applyFilter, attachSearch, type SearchIndex } from './search.ts';
-import { initSortable, destroySortables, readLayoutFromDom, isDragging } from './dnd.ts';
+import { initSortable, destroySortables, readLayoutFromDom, isDragging, recentlyDragged } from './dnd.ts';
 import {
     renderSetup,
     renderSettings,
@@ -91,7 +95,27 @@ const state: AppState = {
 const renderOptions = () => ({
     bookmarkTarget: state.prefs.bookmarkTarget,
     showTags: state.prefs.showTags,
+    collapseListsByDefault: state.prefs.collapseListsByDefault,
+    collapseSublistsByDefault: state.prefs.collapseSublistsByDefault,
+    showBookmarkCounts: state.prefs.showBookmarkCounts,
+    collapsedOverrides: readCollapsedOverrides(),
 });
+
+function updateFooter(total: number, matching?: number | null): void {
+    const footer = document.getElementById('footer');
+    if (!footer) return;
+    if (total === 0) {
+        footer.hidden = true;
+        footer.textContent = '';
+        return;
+    }
+    footer.hidden = false;
+    if (matching != null && matching < total) {
+        footer.textContent = `Showing ${matching} of ${total} bookmarks`;
+    } else {
+        footer.textContent = `${total} ${total === 1 ? 'bookmark' : 'bookmarks'}`;
+    }
+}
 
 /* ------------------------------------------------------------------ rendering */
 
@@ -123,6 +147,7 @@ function mountGrid(snapshot: Snapshot): boolean {
 
     const term = searchInput()?.value ?? '';
     if (term) runFilter(term);
+    else updateFooter(snapshot.bookmarks.length);
     window.scrollTo(0, scrollY);
 
     idle(() => initSortable(content(), persistLayout));
@@ -166,6 +191,9 @@ function persistLayout(): void {
 function runFilter(term: string): void {
     if (state.remoteMode) return;
     const matches = applyFilter(state.index, term);
+    const total = state.snapshot?.bookmarks.length ?? 0;
+    updateFooter(total, term.trim() ? matches : null);
+
     const host = document.getElementById('remotePrompt');
     if (!host) return;
 
@@ -188,6 +216,7 @@ async function runRemoteSearch(query: string): Promise<void> {
         const raw = await createClient(state.creds).searchBookmarks(query);
         const bookmarks = sortBookmarks(raw.map(normalizeBookmark).filter((b) => b !== null));
         const { html, items } = renderRemoteResults(bookmarks, query, renderOptions());
+        updateFooter(0);
 
         destroySortables();
         content().innerHTML = html;
@@ -220,6 +249,7 @@ function exitRemoteMode(): void {
 
     // Reachable via "Clear cache" -> search -> remote search: there is no grid to go
     // back to, and leaving the results up would make the button look broken.
+    updateFooter(0);
     state.index = null;
     content().innerHTML = state.revalidating ? renderLoading('Loading bookmarks…') : renderEmpty();
 }
@@ -227,6 +257,7 @@ function exitRemoteMode(): void {
 /* --------------------------------------------------------------------- setup */
 
 function showSetup(options: { baseUrl?: string; apiKey?: string; error?: ReturnType<typeof describeError> | null; busy?: boolean } = {}): void {
+    updateFooter(0);
     destroySortables();
     state.index = null;
     state.mountedHtml = '';
@@ -443,21 +474,25 @@ async function onSettingsClick(event: Event): Promise<void> {
             await revalidate({ force: true });
             break;
         case 'clear':
+            clearCollapsedOverrides();
             await clearCache();
             state.snapshot = null;
             state.pendingRender = null;
             state.index = null;
             state.mountedHtml = '';
+            updateFooter(0);
             closeSettings();
             content().innerHTML = renderLoading('Reloading bookmarks…');
             await revalidate({ force: true });
             break;
         case 'signout':
+            clearCollapsedOverrides();
             await clearCache();
             clearCredentials();
             state.creds = null;
             state.snapshot = null;
             state.pendingRender = null;
+            updateFooter(0);
             closeSettings();
             syncKarakeepLink();
             hideBanner();
@@ -468,6 +503,24 @@ async function onSettingsClick(event: Event): Promise<void> {
     }
 }
 
+function toggleListCollapse(listId: string, isSublist: boolean, groupEl?: HTMLElement | null): void {
+    const overrides = readCollapsedOverrides();
+    const current = isListCollapsed(listId, isSublist, state.prefs, overrides);
+    const next = !current;
+    overrides[listId] = next;
+    writeCollapsedOverrides(overrides);
+
+    const el = groupEl ?? content().querySelector(`[data-list-id="${listId}"]`);
+    if (el) {
+        el.classList.toggle('is-collapsed', next);
+        const btn = el.querySelector(':scope > .list-header .list-collapse-btn');
+        if (btn) {
+            btn.setAttribute('aria-expanded', next ? 'false' : 'true');
+            btn.setAttribute('title', next ? 'Expand' : 'Collapse');
+        }
+    }
+}
+
 async function onSettingsSubmit(event: Event): Promise<void> {
     event.preventDefault();
     const rawUrl = (document.getElementById('settingsUrl') as HTMLInputElement).value;
@@ -475,6 +528,9 @@ async function onSettingsSubmit(event: Event): Promise<void> {
     const bookmarkTarget = (document.getElementById('settingsTarget') as HTMLInputElement).checked ? '_blank' : '_self';
     const showTags = (document.getElementById('settingsTags') as HTMLInputElement).checked;
     const includeSmartLists = (document.getElementById('settingsSmart') as HTMLInputElement).checked;
+    const collapseListsByDefault = (document.getElementById('settingsCollapseLists') as HTMLInputElement).checked;
+    const collapseSublistsByDefault = (document.getElementById('settingsCollapseSublists') as HTMLInputElement).checked;
+    const showBookmarkCounts = (document.getElementById('settingsShowCounts') as HTMLInputElement).checked;
     const numColumns = clampColumns((document.getElementById('settingsColumns') as HTMLInputElement).value);
 
     let baseUrl: string;
@@ -509,8 +565,23 @@ async function onSettingsSubmit(event: Event): Promise<void> {
     writeCredentials(state.creds);
     syncKarakeepLink();
 
+    if (
+        state.prefs.collapseListsByDefault !== collapseListsByDefault ||
+        state.prefs.collapseSublistsByDefault !== collapseSublistsByDefault
+    ) {
+        clearCollapsedOverrides();
+    }
+
     const columnsChanged = state.prefs.numColumns !== numColumns;
-    state.prefs = updatePrefs({ bookmarkTarget, includeSmartLists, showTags, numColumns });
+    state.prefs = updatePrefs({
+        bookmarkTarget,
+        includeSmartLists,
+        showTags,
+        collapseListsByDefault,
+        collapseSublistsByDefault,
+        showBookmarkCounts,
+        numColumns,
+    });
 
     // Changing the column count invalidates a layout saved for a different number
     // of columns; falling back to round-robin beats piling everything into column 0.
@@ -556,7 +627,26 @@ function wireChrome(): void {
 
     content().addEventListener('click', (event) => {
         const action = (event.target as Element | null)?.closest<HTMLElement>('[data-action]');
-        if (action?.dataset['action'] === 'close-remote') exitRemoteMode();
+        if (action?.dataset['action'] === 'close-remote') {
+            exitRemoteMode();
+            return;
+        }
+
+        const target = event.target as Element | null;
+        const header = target?.closest<HTMLElement>('.list-header');
+        if (!header) return;
+
+        if (target?.closest('a')) return;
+        if (isDragging() || recentlyDragged()) return;
+
+        const group = header.closest<HTMLElement>('.list-section, .nested-list-1, .nested-list-2');
+        if (!group) return;
+
+        const listId = group.dataset['listId'];
+        if (!listId) return;
+
+        const isSublist = !group.classList.contains('list-section');
+        toggleListCollapse(listId, isSublist, group);
     });
 
     // `error` does not bubble, which is why the old build attached a listener to
