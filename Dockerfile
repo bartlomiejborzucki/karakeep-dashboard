@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY tsconfig*.json build.mjs index.html styles.css env.js ./
+COPY tsconfig*.json build.mjs index.html styles.css env.js favicon.svg favicon.ico apple-touch-icon.png ./
 COPY src/ ./src/
 COPY test/ ./test/
 

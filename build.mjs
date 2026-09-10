@@ -63,6 +63,11 @@ async function main() {
     }
     await writeFile(path.join(OUT, 'index.html'), html);
 
+    // --- static assets / icons --------------------------------------------
+    await copyFile('favicon.svg', path.join(OUT, 'favicon.svg'));
+    await copyFile('favicon.ico', path.join(OUT, 'favicon.ico'));
+    await copyFile('apple-touch-icon.png', path.join(OUT, 'apple-touch-icon.png'));
+
     // --- generated config placeholder -------------------------------------
     // Overwritten at container start from $KARAKEEP_URL; shipped so it never 404s.
     await copyFile('env.js', path.join(OUT, 'env.js'));
@@ -71,6 +76,9 @@ async function main() {
     console.log(`  assets/${appName}  ${(appJs.length / 1024).toFixed(1)} kB`);
     console.log(`  assets/${cssName}  ${(css.length / 1024).toFixed(1)} kB`);
     console.log(`  sw.js              ${(swJs.length / 1024).toFixed(1)} kB`);
+    console.log(`  favicon.svg`);
+    console.log(`  favicon.ico`);
+    console.log(`  apple-touch-icon.png`);
 }
 
 main().catch((err) => {

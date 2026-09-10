@@ -31,7 +31,7 @@ const MAX_ASSETS = 12;
 
 // Hashed asset URLs are unknown at build time, so only the stable entry points are
 // precached; everything else is added on first fetch by the network-first handler.
-const SHELL: string[] = ['./', './index.html', './env.js'];
+const SHELL: string[] = ['./', './index.html', './env.js', './favicon.svg', './favicon.ico', './apple-touch-icon.png'];
 
 // `export {}` makes this a module, which lets the ServiceWorkerGlobalScope
 // declaration shadow the ambient `self` instead of colliding with it.
