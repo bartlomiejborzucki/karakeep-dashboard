@@ -4,15 +4,15 @@ A compact, home-page style dashboard for browsing your [KaraKeep](https://github
 
 **Docker Image:** `ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest`
 
-![KaraKeep Dashboard Screenshot](screenshot.png)
-
 ## Features
 
 - 📚 **Masonry layout** — Pinterest-style columns that use the whole screen
 - ⚡ **Instant** — renders from a local cache before it makes a single network request
 - 🔌 **API-based** — paste an API key once; no database file to mount
+- ✏️ **Edit mode & drag & drop bookmarks** — reorder/move bookmarks between lists, drag to archive or trash dropzones, or use quick inline actions
+- 📱 **Progressive Web App (PWA)** — installable on desktop and mobile with offline support and native window experience
 - 🔍 **Real-time search** — filters as you type, entirely offline
-- 🖱️ **Drag & drop** — arrange lists across columns; the layout is remembered
+- 🖱️ **Drag & drop columns** — arrange lists across columns; the layout is remembered
 - 📴 **Works offline** — the last view stays available when Karakeep is unreachable
 - 📱 **Responsive** — desktop, tablet and mobile
 - 🏷️ **Tags & descriptions** — searchable always, shown on cards when you want them
@@ -158,6 +158,7 @@ Even when KaraKeep runs on the same NAS, keep `KARAKEEP_URL` as the LAN address:
 | Show bookmark count on lists | ⚙ settings | On by default |
 | Column layout | drag & drop | Saved automatically |
 | Collapsed list states | click header / toggle | Saved automatically per list |
+| Edit mode | header button / Esc | Move bookmarks between lists, archive, or delete |
 
 The ⚙ menu also offers **Refresh now**, **Clear cache** and **Sign out**.
 
@@ -205,8 +206,9 @@ python3 -m http.server 8595 --directory dist
 Layout:
 
 ```
-index.html       shell, CSP, mount points; build.mjs rewrites the asset URLs
+index.html       shell, CSP, mount points, PWA tags; build.mjs rewrites the asset URLs
 styles.css       design system (CSS custom properties, auto dark mode)
+manifest.json    PWA web app manifest
 env.js           placeholder; regenerated in the container from KARAKEEP_URL
 build.mjs        esbuild bundle + content hashing + HTML templating
 src/types.ts     API shapes and the normalized model
@@ -217,10 +219,10 @@ src/api.ts       Karakeep REST client: auth, cursor draining, error taxonomy
 src/model.ts     normalize -> snapshot -> tree; SQLite BINARY sort order
 src/render.ts    HTML generation (escaped), column distribution
 src/search.ts    precomputed index, class-based filtering
-src/dnd.ts       SortableJS wiring and layout persistence
-src/ui.ts        setup screen, settings, toasts, banner
-src/main.ts      boot orchestration and revalidation
-src/sw.ts        service worker: favicon cache + offline fallback
+src/dnd.ts       SortableJS wiring (columns & bookmark drag-and-drop)
+src/ui.ts        setup screen, settings, toasts, banner, confirmation modal
+src/main.ts      boot orchestration, edit mode and revalidation
+src/sw.ts        service worker: PWA shell, favicon cache + offline fallback
 test/            logic tests, run directly as .ts by node --test
 ```
 
