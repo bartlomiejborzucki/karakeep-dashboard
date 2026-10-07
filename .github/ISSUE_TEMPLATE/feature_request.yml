@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an idea for the dashboard
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The dashboard is deliberately a fast *view* of Karakeep, not a second Karakeep.
+        Ideas that keep it fast, static (no backend) and simple are the easiest to accept.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to implement this myself

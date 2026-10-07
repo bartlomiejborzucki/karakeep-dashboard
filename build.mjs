@@ -10,9 +10,13 @@ import { createHash } from 'node:crypto';
 import { mkdir, rm, readFile, writeFile, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const OUT = 'dist';
-const ASSETS = path.join(OUT, 'assets');
 const dev = process.argv.includes('--dev');
+// --demo swaps the API for the in-memory store in src/demo.ts (the GitHub Pages
+// demo and README screenshots). Built to its own directory so it can never be
+// mistaken for, or shipped as, the real image contents.
+const demo = process.argv.includes('--demo');
+const OUT = demo ? 'dist-demo' : 'dist';
+const ASSETS = path.join(OUT, 'assets');
 
 const hash8 = (contents) => createHash('sha256').update(contents).digest('hex').slice(0, 8);
 
@@ -25,6 +29,7 @@ async function bundle(entry, { format = 'esm' } = {}) {
         minify: !dev,
         sourcemap: dev ? 'inline' : false,
         legalComments: 'none',
+        define: { __DEMO__: demo ? 'true' : 'false' },
         write: false,
         logLevel: 'warning',
     });

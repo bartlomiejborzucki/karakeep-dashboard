@@ -30,3 +30,8 @@ node_modules/
 
 # Build output
 dist/
+dist-demo/
+screenshots-tmp/
+
+# Local agent settings (shared settings in .claude/settings.json are committed)
+.claude/settings.local.json

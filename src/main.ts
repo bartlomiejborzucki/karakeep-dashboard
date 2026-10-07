@@ -11,7 +11,9 @@ import {
     FULL_REFETCH_TTL_MS,
     CACHE_MAX_AGE_MS,
     SCHEMA_VERSION,
+    REPO_URL,
 } from './config.ts';
+import { createDemoClient, DEMO_API_KEY, DEMO_BASE_URL } from './demo.ts';
 import {
     readCredentials,
     writeCredentials,
@@ -74,6 +76,14 @@ import {
 import type { ApiUser, Credentials, List, Prefs, Snapshot } from './types.ts';
 
 const content = () => document.getElementById('content')!;
+
+let demoClient: KarakeepClient | null = null;
+
+// The one place a client is made, so demo builds can substitute the in-memory store.
+function clientFor(creds: { baseUrl: string; apiKey: string }): KarakeepClient {
+    if (__DEMO__) return (demoClient ??= createDemoClient());
+    return createClient(creds);
+}
 const searchInput = () => document.getElementById('searchInput') as HTMLInputElement | null;
 
 interface AppState {
@@ -83,6 +93,9 @@ interface AppState {
     index: SearchIndex | null;
     mountedHtml: string;
     revalidating: boolean;
+    // A revalidation requested while one was running. Dropping it would lose the
+    // rollback that a failed edit-mode action relies on, so it runs afterwards.
+    queuedRevalidate: { force: boolean } | null;
     pendingRender: Snapshot | null;
     remoteMode: boolean;
     partial: boolean;
@@ -96,6 +109,7 @@ const state: AppState = {
     index: null,
     mountedHtml: '',
     revalidating: false,
+    queuedRevalidate: null,
     pendingRender: null,
     remoteMode: false,
     partial: false,
@@ -222,8 +236,8 @@ function toggleEditMode(): void {
 
     if (btn) {
         btn.classList.toggle('is-active', state.editMode);
-        btn.setAttribute('title', state.editMode ? 'Zakończ edycję' : 'Tryb edycji');
-        btn.setAttribute('aria-label', state.editMode ? 'Zakończ edycję' : 'Włącz tryb edycji');
+        btn.setAttribute('title', state.editMode ? 'Exit edit mode' : 'Edit mode');
+        btn.setAttribute('aria-label', state.editMode ? 'Exit edit mode' : 'Enter edit mode');
     }
 
     if (bar) {
@@ -254,15 +268,15 @@ async function handleMoveBookmark(bookmarkId: string, fromListId: string, toList
     state.mountedHtml = '';
     mountGrid(snapshot);
 
-    const toListName = snapshot.lists.find((l) => l.id === toListId)?.name ?? 'listy';
-    showToast(`Przeniesiono zakładkę do „${toListName}”.`);
+    const toListName = snapshot.lists.find((l) => l.id === toListId)?.name ?? 'list';
+    showToast(`Moved to “${toListName}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.addBookmarkToList(toListId, bookmarkId);
         await client.removeBookmarkFromList(fromListId, bookmarkId);
     } catch (err) {
-        showToast(`Błąd przenoszenia: ${(err as Error).message}`, { kind: 'warn' });
+        showToast(`Move failed: ${(err as Error).message}`, { kind: 'warn' });
         await revalidate({ force: true });
     }
 }
@@ -272,7 +286,7 @@ async function handleArchiveBookmark(bookmarkId: string, fromListId: string): Pr
 
     const snapshot = state.snapshot;
     const bm = snapshot.bookmarks.find((b) => b.id === bookmarkId);
-    const title = bm?.title ?? 'zakładkę';
+    const title = bm?.title ?? 'bookmark';
 
     const fromMembership = snapshot.membership[fromListId] ?? [];
     snapshot.membership[fromListId] = fromMembership.filter((id) => id !== bookmarkId);
@@ -292,13 +306,13 @@ async function handleArchiveBookmark(bookmarkId: string, fromListId: string): Pr
     state.mountedHtml = '';
     mountGrid(snapshot);
     updateFooter(snapshot.bookmarks.length);
-    showToast(`Zarchiwizowano „${title}”.`);
+    showToast(`Archived “${title}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.archiveBookmark(bookmarkId);
     } catch (err) {
-        showToast(`Błąd archiwizacji: ${(err as Error).message}`, { kind: 'warn' });
+        showToast(`Archive failed: ${(err as Error).message}`, { kind: 'warn' });
         await revalidate({ force: true });
     }
 }
@@ -308,13 +322,13 @@ async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): P
 
     const snapshot = state.snapshot;
     const bm = snapshot.bookmarks.find((b) => b.id === bookmarkId);
-    const title = bm?.title ?? 'tę zakładkę';
+    const title = bm?.title ?? 'this bookmark';
 
     const confirmed = await showConfirmDialog({
-        title: 'Usunąć zakładkę?',
-        message: `Czy na pewno chcesz trwale usunąć „${title}”? Tej operacji nie można cofnąć.`,
-        confirmLabel: 'Usuń',
-        cancelLabel: 'Anuluj',
+        title: 'Delete bookmark?',
+        message: `Permanently delete “${title}”? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel',
         danger: true,
     });
 
@@ -333,13 +347,13 @@ async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): P
     state.mountedHtml = '';
     mountGrid(snapshot);
     updateFooter(snapshot.bookmarks.length);
-    showToast(`Usunięto „${title}”.`);
+    showToast(`Deleted “${title}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.deleteBookmark(bookmarkId);
     } catch (err) {
-        showToast(`Błąd usuwania: ${(err as Error).message}`, { kind: 'warn' });
+        showToast(`Delete failed: ${(err as Error).message}`, { kind: 'warn' });
         await revalidate({ force: true });
     }
 }
@@ -371,7 +385,7 @@ async function runRemoteSearch(query: string): Promise<void> {
     host.innerHTML = renderRemotePrompt(query).replace('Search all of Karakeep', 'Searching…');
 
     try {
-        const raw = await createClient(state.creds).searchBookmarks(query);
+        const raw = await clientFor(state.creds).searchBookmarks(query);
         const bookmarks = sortBookmarks(raw.map(normalizeBookmark).filter((b) => b !== null));
         const { html, items } = renderRemoteResults(bookmarks, query, renderOptions());
         updateFooter(0);
@@ -452,7 +466,7 @@ async function onSetupSubmit(event: Event): Promise<void> {
     showSetup({ baseUrl: rawUrl, apiKey, busy: true });
 
     try {
-        const me = await createClient({ baseUrl, apiKey }).getMe();
+        const me = await clientFor({ baseUrl, apiKey }).getMe();
         state.creds = { baseUrl, apiKey, userId: me.id ?? null };
         writeCredentials(state.creds);
         syncKarakeepLink();
@@ -511,10 +525,14 @@ async function fetchEverything(client: KarakeepClient, lists: readonly List[]) {
 }
 
 async function revalidate({ force = false }: { force?: boolean } = {}): Promise<void> {
-    if (state.revalidating || !state.creds?.apiKey) return;
+    if (!state.creds?.apiKey) return;
+    if (state.revalidating) {
+        state.queuedRevalidate = { force: force || Boolean(state.queuedRevalidate?.force) };
+        return;
+    }
     state.revalidating = true;
 
-    const client = createClient(state.creds);
+    const client = clientFor(state.creds);
     try {
         const [stats, rawLists] = await Promise.all([client.getStats(), client.getLists()]);
         const lists = rawLists.map(normalizeList);
@@ -557,6 +575,9 @@ async function revalidate({ force = false }: { force?: boolean } = {}): Promise<
         handleRevalidateError(err);
     } finally {
         state.revalidating = false;
+        const queued = state.queuedRevalidate;
+        state.queuedRevalidate = null;
+        if (queued) void revalidate(queued);
     }
 }
 
@@ -588,6 +609,9 @@ function settingsStatus(): string {
 
 function openSettings(): void {
     const host = document.getElementById('settings')!;
+    // Reachable twice (gear button, then the Reconnect banner): re-opening without
+    // closing would stack a second click listener and run every action twice.
+    if (!host.hidden) closeSettings();
     host.innerHTML = renderSettings({
         baseUrl: state.creds?.baseUrl ?? DEFAULT_URL,
         hasKey: Boolean(state.creds?.apiKey),
@@ -668,7 +692,7 @@ function toggleListCollapse(listId: string, isSublist: boolean, groupEl?: HTMLEl
     overrides[listId] = next;
     writeCollapsedOverrides(overrides);
 
-    const el = groupEl ?? content().querySelector(`[data-list-id="${listId}"]`);
+    const el = groupEl ?? content().querySelector(`[data-list-id="${CSS.escape(listId)}"]`);
     if (el) {
         el.classList.toggle('is-collapsed', next);
         const btn = el.querySelector(':scope > .list-header .list-collapse-btn');
@@ -709,7 +733,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
     // preferences saved (and the drag layout reset) behind a panel that stays open.
     let me: ApiUser;
     try {
-        me = await createClient({ baseUrl, apiKey }).getMe();
+        me = await clientFor({ baseUrl, apiKey }).getMe();
     } catch (err) {
         showToast(describeError(err, baseUrl).message, { kind: 'warn' });
         return;
@@ -765,7 +789,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
 
 function syncKarakeepLink(): void {
     const link = document.getElementById('karakeepLink') as HTMLAnchorElement | null;
-    if (link) link.href = state.creds?.baseUrl || DEFAULT_URL;
+    if (link) link.href = __DEMO__ ? REPO_URL : state.creds?.baseUrl || DEFAULT_URL;
 }
 
 function wireChrome(): void {
@@ -776,9 +800,11 @@ function wireChrome(): void {
     document.getElementById('exitEditModeBtn')?.addEventListener('click', toggleEditMode);
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && state.editMode) {
-            toggleEditMode();
-        }
+        // A dialog or the settings panel owns Escape while it is open.
+        if (event.key !== 'Escape' || !state.editMode) return;
+        if (document.querySelector('.confirm-dialog-container')) return;
+        if (!document.getElementById('settings')?.hidden) return;
+        toggleEditMode();
     });
 
     const input = searchInput();
@@ -874,9 +900,24 @@ function registerServiceWorker(): void {
     });
 }
 
+function showDemoNotice(): void {
+    const notice = document.createElement('div');
+    notice.className = 'demo-notice';
+    notice.append('Live demo with sample bookmarks — edits reset on reload. ');
+    const link = document.createElement('a');
+    link.href = REPO_URL;
+    link.textContent = 'Self-host it from GitHub';
+    notice.append(link);
+    document.getElementById('banner')?.before(notice);
+}
+
 async function boot(): Promise<void> {
     state.prefs = readPrefs();
     state.creds = readCredentials();
+    if (__DEMO__) {
+        if (!state.creds?.apiKey) state.creds = { baseUrl: DEMO_BASE_URL, apiKey: DEMO_API_KEY, userId: 'demo-user' };
+        showDemoNotice();
+    }
     wireChrome();
 
     if (!state.creds?.apiKey) {

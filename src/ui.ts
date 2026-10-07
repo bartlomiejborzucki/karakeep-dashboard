@@ -227,8 +227,8 @@ export function formatAgo(timestamp: number | null): string {
 export function showConfirmDialog({
     title,
     message,
-    confirmLabel = 'Usuń',
-    cancelLabel = 'Anuluj',
+    confirmLabel = 'Delete',
+    cancelLabel = 'Cancel',
     danger = true,
 }: {
     title: string;
@@ -242,8 +242,8 @@ export function showConfirmDialog({
         modal.className = 'confirm-dialog-container';
         modal.innerHTML = `
             <div class="settings-backdrop"></div>
-            <div class="confirm-dialog" role="dialog" aria-modal="true">
-                <h3>${esc(title)}</h3>
+            <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle">
+                <h3 id="confirmDialogTitle">${esc(title)}</h3>
                 <p>${esc(message)}</p>
                 <div class="confirm-actions">
                     <button type="button" class="btn-cancel" data-choice="cancel">${esc(cancelLabel)}</button>
@@ -253,14 +253,26 @@ export function showConfirmDialog({
         `;
         document.body.appendChild(modal);
 
+        const previousFocus = document.activeElement as HTMLElement | null;
+        const onKeydown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                cleanup(false);
+            }
+        };
         const cleanup = (result: boolean) => {
+            document.removeEventListener('keydown', onKeydown);
             modal.remove();
+            previousFocus?.focus?.();
             resolve(result);
         };
 
+        document.addEventListener('keydown', onKeydown);
         modal.querySelector('[data-choice="cancel"]')?.addEventListener('click', () => cleanup(false));
         modal.querySelector('[data-choice="confirm"]')?.addEventListener('click', () => cleanup(true));
         modal.querySelector('.settings-backdrop')?.addEventListener('click', () => cleanup(false));
+        // Destructive by default: focus the safe choice, so Enter cancels.
+        modal.querySelector<HTMLElement>('[data-choice="cancel"]')?.focus();
     });
 }
 
