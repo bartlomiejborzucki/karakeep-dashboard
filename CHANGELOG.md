@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Unraid template (`unraid/karakeep-dashboard.xml`).
 - `FRAME_ANCESTORS` to allow embedding in Homepage, Homarr, Dashy or another dashboard
   (framing stays denied by default), with setup examples for all three in the README.
 - Code of Conduct and automatic GitHub Releases from `CHANGELOG.md` on `v*` tags.

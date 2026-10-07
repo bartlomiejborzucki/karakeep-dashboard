@@ -108,6 +108,15 @@ Drop this in next to `web`, `chrome` and `meilisearch` (see `docker-compose.kara
 > API call is made by your browser, not by this container. KaraKeep Dashboard needs no shared
 > network and no `depends_on`; it only serves static files.
 
+### On Unraid
+
+Until the template is listed in Community Applications, add it by URL: **Docker →
+Template repositories**, paste
+`https://github.com/bartlomiejborzucki/karakeep-dashboard`, **Save**, then **Add
+Container** and pick *karakeep-dashboard*. Set **Karakeep URL** to the address your
+browser uses for Karakeep (e.g. `http://192.168.1.50:3000`), apply, and open the WebUI.
+The template lives in [`unraid/`](unraid/karakeep-dashboard.xml).
+
 ### On a Synology NAS with Dockhand
 
 `docker-compose.synology.yml` is this stack, ready to paste. It works the same in
