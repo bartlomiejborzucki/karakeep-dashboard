@@ -24,6 +24,7 @@ npm run typecheck   # tsc only
 npm test            # node --test 'test/*.test.ts'
 npm run build       # -> dist/ (minified, content-hashed assets)
 npm run dev         # unminified build with inline sourcemaps
+npm run build:demo  # -> dist-demo/, API swapped for in-memory sample data (GitHub Pages demo)
 python3 -m http.server 8595 --directory dist   # serve the build
 docker build -t karakeep-dashboard:dev .       # image build also runs typecheck + tests
 ```
@@ -54,6 +55,8 @@ src/dnd.ts       SortableJS wiring: column layout + edit-mode bookmark moves
 src/ui.ts        setup screen, settings panel, toasts, banner, confirm dialog
 src/main.ts      boot orchestration, revalidation, edit-mode handlers
 src/sw.ts        service worker (own tsconfig, WebWorker lib)
+src/demo.ts      in-memory KarakeepClient for the demo build
+docs/screenshots README images, generated from the demo build
 test/            node:test suites, imported as ../src/*.ts
 ```
 
@@ -106,12 +109,19 @@ a new non-DOM entry point needs its own config.
 - Tests: `node:test` + `node:assert/strict`, descriptive sentence-style test names.
   Add a test for every bug fix and every new pure function.
 
+## Demo build
+
+`__DEMO__` is an esbuild `define` (true only for `npm run build:demo`). Reference it
+**directly** and only from `main.ts` — routing it through an exported constant stops
+esbuild from folding it and leaks `src/demo.ts` into the production bundle. All API
+access in `main.ts` goes through `clientFor()`, so the demo store is substituted in
+one place. If you add a method to `KarakeepClient`, implement it in `src/demo.ts` too.
+After a visible UI change, regenerate `docs/screenshots/` from the demo build.
+
 ## UI language
 
-User-facing strings are currently **mixed**: most UI is English, edit mode
-(index.html action bar, `main.ts` edit handlers, `ui.ts` confirm dialog) is Polish.
-Do not add new Polish strings. New UI text is English; if you touch the edit-mode
-strings, translating them to English (or introducing a tiny i18n map) is welcome.
+All user-facing strings are English and inline (no i18n layer yet). Do not add strings
+in other languages; a proper i18n map is a welcome, separate change.
 
 ## Workflow for agents
 

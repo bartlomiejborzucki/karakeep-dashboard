@@ -1,8 +1,30 @@
 # KaraKeep Dashboard
 
-A compact, home-page style dashboard for browsing your [KaraKeep](https://github.com/karakeep-app/karakeep) bookmarks. Every bookmark on one page, organised by list. Bookmark management stays in the full (and excellent) KaraKeep app — this is just a fast way to *get to* your links.
+[![CI](https://github.com/bartlomiejborzucki/karakeep-dashboard/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/bartlomiejborzucki/karakeep-dashboard/actions/workflows/docker-publish.yml)
+[![Release](https://img.shields.io/github/v/release/bartlomiejborzucki/karakeep-dashboard?sort=semver)](https://github.com/bartlomiejborzucki/karakeep-dashboard/releases)
+[![Image](https://img.shields.io/badge/image-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/bartlomiejborzucki/karakeep-dashboard/pkgs/container/karakeep-dashboard)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**Docker Image:** `ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest`
+A fast, self-hosted start page for your [KaraKeep](https://github.com/karakeep-app/karakeep) bookmarks. Every bookmark on one page, organised by list. Bookmark management stays in the full (and excellent) KaraKeep app — this is just the quickest way to *get to* your links.
+
+**[▶ Try the live demo](https://bartlomiejborzucki.github.io/karakeep-dashboard/)** — sample data, nothing to install.
+
+```bash
+docker run -d -p 8595:8595 -e KARAKEEP_URL=http://localhost:3000 ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest
+```
+
+![Dashboard in light mode](docs/screenshots/dashboard-light.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/dashboard-dark.png" alt="Dark mode"><br><sub>Automatic dark mode</sub></td>
+    <td width="50%"><img src="docs/screenshots/edit-mode.png" alt="Edit mode"><br><sub>Edit mode: drag between lists, archive or delete</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/search.png" alt="Instant search"><br><sub>Instant, offline search across titles, URLs and tags</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/mobile.png" alt="Mobile" width="45%"><br><sub>Installable PWA, works on phones</sub></td>
+  </tr>
+</table>
 
 ## Features
 
@@ -198,6 +220,7 @@ npm ci             # .npmrc pins the public registry, so no flags are needed
 npm run check      # typecheck + tests
 npm run build      # -> dist/
 npm run dev        # unminified build with inline sourcemaps
+npm run build:demo # -> dist-demo/, API replaced by in-memory sample data
 
 # Serve the build any way you like
 python3 -m http.server 8595 --directory dist
@@ -223,6 +246,7 @@ src/dnd.ts       SortableJS wiring (columns & bookmark drag-and-drop)
 src/ui.ts        setup screen, settings, toasts, banner, confirmation modal
 src/main.ts      boot orchestration, edit mode and revalidation
 src/sw.ts        service worker: PWA shell, favicon cache + offline fallback
+src/demo.ts      in-memory API for the demo build (tree-shaken from normal builds)
 test/            logic tests, run directly as .ts by node --test
 ```
 

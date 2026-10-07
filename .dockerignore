@@ -31,3 +31,6 @@ config/
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation assets (screenshots) are not part of the image
+docs/

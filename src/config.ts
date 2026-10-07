@@ -34,7 +34,13 @@ export const CACHE_KEY = 'view';
 declare global {
     // eslint-disable-next-line no-var
     var KARAKEEP_ENV: { karakeepUrl?: string } | undefined;
+    // Replaced by esbuild `define` (build.mjs): true only in `--demo` builds, which
+    // swap the API for the in-memory store in src/demo.ts. Referenced directly,
+    // never through a variable, so a normal build folds it and drops the demo code.
+    // Undefined under node --test, so only main.ts (never imported by tests) reads it.
+    const __DEMO__: boolean;
 }
+export const REPO_URL = 'https://github.com/bartlomiejborzucki/karakeep-dashboard';
 
 // env.js (generated in the container) may seed a default instance URL. Never a token.
 export const DEFAULT_URL = globalThis.KARAKEEP_ENV?.karakeepUrl || 'http://localhost:3000';

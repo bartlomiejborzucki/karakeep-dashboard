@@ -11,7 +11,9 @@ import {
     FULL_REFETCH_TTL_MS,
     CACHE_MAX_AGE_MS,
     SCHEMA_VERSION,
+    REPO_URL,
 } from './config.ts';
+import { createDemoClient, DEMO_API_KEY, DEMO_BASE_URL } from './demo.ts';
 import {
     readCredentials,
     writeCredentials,
@@ -74,6 +76,14 @@ import {
 import type { ApiUser, Credentials, List, Prefs, Snapshot } from './types.ts';
 
 const content = () => document.getElementById('content')!;
+
+let demoClient: KarakeepClient | null = null;
+
+// The one place a client is made, so demo builds can substitute the in-memory store.
+function clientFor(creds: { baseUrl: string; apiKey: string }): KarakeepClient {
+    if (__DEMO__) return (demoClient ??= createDemoClient());
+    return createClient(creds);
+}
 const searchInput = () => document.getElementById('searchInput') as HTMLInputElement | null;
 
 interface AppState {
@@ -262,7 +272,7 @@ async function handleMoveBookmark(bookmarkId: string, fromListId: string, toList
     showToast(`Moved to “${toListName}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.addBookmarkToList(toListId, bookmarkId);
         await client.removeBookmarkFromList(fromListId, bookmarkId);
     } catch (err) {
@@ -299,7 +309,7 @@ async function handleArchiveBookmark(bookmarkId: string, fromListId: string): Pr
     showToast(`Archived “${title}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.archiveBookmark(bookmarkId);
     } catch (err) {
         showToast(`Archive failed: ${(err as Error).message}`, { kind: 'warn' });
@@ -340,7 +350,7 @@ async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): P
     showToast(`Deleted “${title}”.`);
 
     try {
-        const client = createClient(state.creds);
+        const client = clientFor(state.creds);
         await client.deleteBookmark(bookmarkId);
     } catch (err) {
         showToast(`Delete failed: ${(err as Error).message}`, { kind: 'warn' });
@@ -375,7 +385,7 @@ async function runRemoteSearch(query: string): Promise<void> {
     host.innerHTML = renderRemotePrompt(query).replace('Search all of Karakeep', 'Searching…');
 
     try {
-        const raw = await createClient(state.creds).searchBookmarks(query);
+        const raw = await clientFor(state.creds).searchBookmarks(query);
         const bookmarks = sortBookmarks(raw.map(normalizeBookmark).filter((b) => b !== null));
         const { html, items } = renderRemoteResults(bookmarks, query, renderOptions());
         updateFooter(0);
@@ -456,7 +466,7 @@ async function onSetupSubmit(event: Event): Promise<void> {
     showSetup({ baseUrl: rawUrl, apiKey, busy: true });
 
     try {
-        const me = await createClient({ baseUrl, apiKey }).getMe();
+        const me = await clientFor({ baseUrl, apiKey }).getMe();
         state.creds = { baseUrl, apiKey, userId: me.id ?? null };
         writeCredentials(state.creds);
         syncKarakeepLink();
@@ -522,7 +532,7 @@ async function revalidate({ force = false }: { force?: boolean } = {}): Promise<
     }
     state.revalidating = true;
 
-    const client = createClient(state.creds);
+    const client = clientFor(state.creds);
     try {
         const [stats, rawLists] = await Promise.all([client.getStats(), client.getLists()]);
         const lists = rawLists.map(normalizeList);
@@ -723,7 +733,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
     // preferences saved (and the drag layout reset) behind a panel that stays open.
     let me: ApiUser;
     try {
-        me = await createClient({ baseUrl, apiKey }).getMe();
+        me = await clientFor({ baseUrl, apiKey }).getMe();
     } catch (err) {
         showToast(describeError(err, baseUrl).message, { kind: 'warn' });
         return;
@@ -779,7 +789,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
 
 function syncKarakeepLink(): void {
     const link = document.getElementById('karakeepLink') as HTMLAnchorElement | null;
-    if (link) link.href = state.creds?.baseUrl || DEFAULT_URL;
+    if (link) link.href = __DEMO__ ? REPO_URL : state.creds?.baseUrl || DEFAULT_URL;
 }
 
 function wireChrome(): void {
@@ -890,9 +900,24 @@ function registerServiceWorker(): void {
     });
 }
 
+function showDemoNotice(): void {
+    const notice = document.createElement('div');
+    notice.className = 'demo-notice';
+    notice.append('Live demo with sample bookmarks — edits reset on reload. ');
+    const link = document.createElement('a');
+    link.href = REPO_URL;
+    link.textContent = 'Self-host it from GitHub';
+    notice.append(link);
+    document.getElementById('banner')?.before(notice);
+}
+
 async function boot(): Promise<void> {
     state.prefs = readPrefs();
     state.creds = readCredentials();
+    if (__DEMO__) {
+        if (!state.creds?.apiKey) state.creds = { baseUrl: DEMO_BASE_URL, apiKey: DEMO_API_KEY, userId: 'demo-user' };
+        showDemoNotice();
+    }
     wireChrome();
 
     if (!state.creds?.apiKey) {
