@@ -17,7 +17,7 @@
     "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
-    "@types/node": "^26.5.0",
+    "@types/node": "^26.6.4",
     "@types/sortablejs": "^1.15.9",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
