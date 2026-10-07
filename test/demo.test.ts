@@ -40,3 +40,16 @@ test('each demo client starts from a fresh store', async () => {
     const b = createDemoClient();
     assert.ok((await b.getListBookmarks('daily')).some((x) => x.id === first!.id));
 });
+
+test('demo favourites include a bookmark that is in no list', async () => {
+    const client = createDemoClient();
+    const favourites = await client.getFavouriteBookmarks();
+    assert.ok(favourites.length >= 3);
+    assert.ok(favourites.every((b) => b.favourited));
+
+    const listed = new Set<string>();
+    for (const list of await client.getLists()) {
+        for (const b of await client.getListBookmarks(list.id)) listed.add(b.id);
+    }
+    assert.ok(favourites.some((b) => !listed.has(b.id)), 'expected an unlisted favourite');
+});

@@ -25,7 +25,9 @@ export interface ApiStats {
     bookmarksByType?: { link?: number; text?: number; asset?: number };
 }
 
-export type ListKind = 'manual' | 'smart';
+// 'favourites' is not a Karakeep list type: it marks the dashboard's own virtual
+// list of favourited bookmarks (see FAVOURITES_LIST in config.ts).
+export type ListKind = 'manual' | 'smart' | 'favourites';
 
 export interface ApiList {
     id: string;
@@ -140,6 +142,7 @@ export interface Prefs {
     collapseListsByDefault: boolean;
     collapseSublistsByDefault: boolean;
     showBookmarkCounts: boolean;
+    showFavourites: boolean;
 }
 
 export interface ErrorInfo {

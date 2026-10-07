@@ -133,8 +133,11 @@ export function sortBookmarks(bookmarks: readonly Bookmark[]): Bookmark[] {
  *    that ran inside both the root filter and every renderList call;
  *  - a `visited` guard, because a parentId cycle previously hung the browser.
  */
-export function buildTree(snapshot: Snapshot, options: { includeSmartLists?: boolean; showEmptyLists?: boolean } = {}): ListNode[] {
-    const { includeSmartLists = false, showEmptyLists = false } = options;
+export function buildTree(
+    snapshot: Snapshot,
+    options: { includeSmartLists?: boolean; showEmptyLists?: boolean; showFavourites?: boolean } = {}
+): ListNode[] {
+    const { includeSmartLists = false, showEmptyLists = false, showFavourites = false } = options;
     const bookmarksById = new Map(snapshot.bookmarks.map((b) => [b.id, b]));
     const nodes = new Map<string, ListNode>();
 
@@ -142,6 +145,8 @@ export function buildTree(snapshot: Snapshot, options: { includeSmartLists?: boo
         // Smart lists have no rows in `bookmarksInLists`, so the SQL build could never
         // show them. Rendering them by default would be a visible change.
         if (!includeSmartLists && list.type === 'smart') continue;
+        // A cached snapshot can still hold the list after the preference is turned off.
+        if (!showFavourites && list.type === 'favourites') continue;
 
         const bookmarks: Bookmark[] = [];
         for (const id of snapshot.membership[list.id] ?? []) {

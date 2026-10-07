@@ -11,6 +11,7 @@ import {
     FULL_REFETCH_TTL_MS,
     CACHE_MAX_AGE_MS,
     SCHEMA_VERSION,
+    FAVOURITES_LIST,
     REPO_URL,
 } from './config.ts';
 import { createDemoClient, DEMO_API_KEY, DEMO_BASE_URL } from './demo.ts';
@@ -149,6 +150,7 @@ function currentGrid(snapshot: Snapshot) {
     const roots = buildTree(snapshot, {
         includeSmartLists: state.prefs.includeSmartLists,
         showEmptyLists: state.editMode,
+        showFavourites: state.prefs.showFavourites,
     });
     return renderGrid(distributeColumns(roots, state.prefs), renderOptions());
 }
@@ -491,7 +493,9 @@ function currentServerId(): string {
 async function fetchEverything(client: KarakeepClient, lists: readonly List[]) {
     const results = await mapWithConcurrency(lists, FANOUT_CONCURRENCY, async (list) => ({
         listId: list.id,
-        bookmarks: (await client.getListBookmarks(list.id)).map(normalizeBookmark).filter((b) => b !== null),
+        bookmarks: (list.type === 'favourites' ? await client.getFavouriteBookmarks() : await client.getListBookmarks(list.id))
+            .map(normalizeBookmark)
+            .filter((b) => b !== null),
     }));
 
     const perList: PerList[] = [];
@@ -550,9 +554,12 @@ async function revalidate({ force = false }: { force?: boolean } = {}): Promise<
             return; // Two requests, no DOM work, done.
         }
 
-        const { perList, failed } = await fetchEverything(client, lists);
+        // The virtual favourites list rides along with the fan-out (and its failure
+        // handling) but is left out of the fingerprint: `numFavorites` already is.
+        const allLists = state.prefs.showFavourites ? [{ ...FAVOURITES_LIST }, ...lists] : lists;
+        const { perList, failed } = await fetchEverything(client, allLists);
         const next = buildSnapshot({
-            lists,
+            lists: allLists,
             perList,
             fingerprint,
             serverId: currentServerId(),
@@ -567,7 +574,7 @@ async function revalidate({ force = false }: { force?: boolean } = {}): Promise<
 
         hideBanner();
         if (failed.length) {
-            showToast(`${failed.length} of ${lists.length} lists failed to refresh.`, { kind: 'warn' });
+            showToast(`${failed.length} of ${allLists.length} lists failed to refresh.`, { kind: 'warn' });
         } else if (changed && previous) {
             showToast('Bookmarks updated.');
         }
@@ -713,6 +720,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
     const collapseListsByDefault = (document.getElementById('settingsCollapseLists') as HTMLInputElement).checked;
     const collapseSublistsByDefault = (document.getElementById('settingsCollapseSublists') as HTMLInputElement).checked;
     const showBookmarkCounts = (document.getElementById('settingsShowCounts') as HTMLInputElement).checked;
+    const showFavourites = (document.getElementById('settingsFavourites') as HTMLInputElement).checked;
     const numColumns = clampColumns((document.getElementById('settingsColumns') as HTMLInputElement).value);
 
     let baseUrl: string;
@@ -762,6 +770,7 @@ async function onSettingsSubmit(event: Event): Promise<void> {
         collapseListsByDefault,
         collapseSublistsByDefault,
         showBookmarkCounts,
+        showFavourites,
         numColumns,
     });
 
@@ -916,6 +925,16 @@ async function boot(): Promise<void> {
     state.creds = readCredentials();
     if (__DEMO__) {
         if (!state.creds?.apiKey) state.creds = { baseUrl: DEMO_BASE_URL, apiKey: DEMO_API_KEY, userId: 'demo-user' };
+        // Show off the optional favourites card on a visitor's first load only, so
+        // turning it off in settings sticks.
+        try {
+            if (!localStorage.getItem('kkhd.demo.seeded')) {
+                localStorage.setItem('kkhd.demo.seeded', '1');
+                state.prefs = updatePrefs({ showFavourites: true });
+            }
+        } catch {
+            /* storage disabled: the demo still works, just without favourites */
+        }
         showDemoNotice();
     }
     wireChrome();

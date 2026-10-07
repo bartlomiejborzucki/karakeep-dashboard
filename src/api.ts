@@ -91,6 +91,7 @@ export interface KarakeepClient {
     getStats(): Promise<ApiStats>;
     getLists(): Promise<ApiList[]>;
     getListBookmarks(listId: string): Promise<ApiBookmark[]>;
+    getFavouriteBookmarks(): Promise<ApiBookmark[]>;
     searchBookmarks(query: string): Promise<ApiBookmark[]>;
     addBookmarkToList(listId: string, bookmarkId: string): Promise<void>;
     removeBookmarkFromList(listId: string, bookmarkId: string): Promise<void>;
@@ -201,6 +202,19 @@ export function createClient({ baseUrl, apiKey }: { baseUrl: string; apiKey: str
             return drain(
                 `/lists/${encodeURIComponent(listId)}/bookmarks`,
                 new URLSearchParams({ limit: String(PAGE_LIMIT), includeContent: 'false' }),
+                MAX_PAGES_PER_LIST
+            );
+        },
+
+        getFavouriteBookmarks() {
+            return drain(
+                '/bookmarks',
+                new URLSearchParams({
+                    favourited: 'true',
+                    archived: 'false',
+                    limit: String(PAGE_LIMIT),
+                    includeContent: 'false',
+                }),
                 MAX_PAGES_PER_LIST
             );
         },

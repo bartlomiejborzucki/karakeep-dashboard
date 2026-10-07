@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { esc, safeUrl, faviconUrlFor, distributeColumns, renderGrid, countBookmarks } from '../src/render.ts';
 import { buildTree, normalizeBookmark } from '../src/model.ts';
-import { DEFAULT_COLUMNS, SCHEMA_VERSION } from '../src/config.ts';
+import { DEFAULT_COLUMNS, FAVOURITES_LIST, SCHEMA_VERSION } from '../src/config.ts';
 import type { Bookmark, ListNode, Prefs, Snapshot } from '../src/types.ts';
 
 const listNode = (id: string, bookmarks: Bookmark[] = [], children: ListNode[] = []): ListNode => ({
@@ -306,3 +306,29 @@ test('renderGrid supports editMode markup and normal mode markup', () => {
     assert.equal(editHtml.includes('data-action="delete"'), true);
 });
 
+
+test('distributeColumns pins favourites to the top of the first column', () => {
+    const favourites: ListNode = { ...listNode(FAVOURITES_LIST.id), type: 'favourites' };
+    const lists = [listNode('a'), listNode('b'), favourites, listNode('c')];
+
+    // Round-robin: favourites first in column 0, the rest unaffected by its presence.
+    const plain = distributeColumns(lists, layout({ numColumns: 2 }));
+    assert.deepEqual(plain.map((c) => c.map((l) => l.id)), [[FAVOURITES_LIST.id, 'a', 'c'], ['b']]);
+
+    // A saved layout that predates favourites: still pinned to the top.
+    const saved = distributeColumns(lists, layout({ numColumns: 2, columnLayout: { '0': ['b'], '1': ['a', 'c'] } }));
+    assert.deepEqual(saved.map((c) => c.map((l) => l.id)), [[FAVOURITES_LIST.id, 'b'], ['a', 'c']]);
+
+    // Once the user has dragged it, the saved position wins.
+    const moved = distributeColumns(
+        lists,
+        layout({ numColumns: 2, columnLayout: { '0': ['b'], '1': ['a', FAVOURITES_LIST.id, 'c'] } })
+    );
+    assert.deepEqual(moved.map((c) => c.map((l) => l.id)), [['b'], ['a', FAVOURITES_LIST.id, 'c']]);
+});
+
+test('favourites render with their own list type so drag and drop can refuse them', () => {
+    const favourites: ListNode = { ...listNode(FAVOURITES_LIST.id, [bm('x', 'X', 'https://x.example')]), type: 'favourites' };
+    const { html } = renderGrid([[favourites]], { editMode: true });
+    assert.match(html, /data-list-type="favourites"/);
+});

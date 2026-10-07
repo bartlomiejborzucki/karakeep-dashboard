@@ -18,6 +18,17 @@ export const SEARCH_RESULT_LIMIT = 50;
 export const FULL_REFETCH_TTL_MS = 15 * 60 * 1000;
 export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Favourites are shown as a virtual list: one extra request on a full refresh,
+// pinned to the top of the first column until the user drags it elsewhere. The id
+// cannot collide with Karakeep's (cuid2: lowercase alphanumerics, no colon).
+export const FAVOURITES_LIST = {
+    id: 'kkhd:favourites',
+    name: 'Favourites',
+    icon: '⭐',
+    parentId: null,
+    type: 'favourites',
+} as const;
+
 export const KEYS = {
     creds: 'kkhd.credentials',
     prefs: 'kkhd.prefs',

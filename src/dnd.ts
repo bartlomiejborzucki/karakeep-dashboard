@@ -123,6 +123,11 @@ export function initSortable(container: Element, onChange: () => void): void {
     }
 }
 
+function acceptsBookmarks(el: HTMLElement): boolean {
+    const type = el.dataset['listType'];
+    return type !== 'smart' && type !== 'favourites';
+}
+
 export interface BookmarkDndHandlers {
     onMoveBookmark: (bookmarkId: string, fromListId: string, toListId: string) => void;
     onArchiveBookmark: (bookmarkId: string, fromListId: string) => void;
@@ -133,13 +138,15 @@ export function initBookmarkSortables(container: Element, handlers: BookmarkDndH
     destroyBookmarkSortables();
 
     for (const grid of container.querySelectorAll<HTMLElement>('.bookmark-grid')) {
-        if (grid.dataset['listType'] === 'smart') continue;
+        // Smart lists and the favourites list are computed, not curated: nothing can
+        // be dragged into or out of them.
+        if (!acceptsBookmarks(grid)) continue;
         bookmarkInstances.push(
             Sortable.create(grid, {
                 group: {
                     name: 'bookmarks',
                     pull: true,
-                    put: (to) => to.el.dataset['listType'] !== 'smart',
+                    put: (to) => acceptsBookmarks(to.el),
                 },
                 animation: 150,
                 ghostClass: 'bookmark-ghost',

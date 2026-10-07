@@ -67,6 +67,7 @@ const DEFAULT_PREFS: Prefs = {
     collapseListsByDefault: false,
     collapseSublistsByDefault: false,
     showBookmarkCounts: true,
+    showFavourites: false,
 };
 
 let migrated = false;
