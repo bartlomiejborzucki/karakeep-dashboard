@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Docker images are tagged `X.Y.Z`, `X.Y`,
 `X` and `latest`.
 
+## [Unreleased]
+
+### Added
+- Code of Conduct and automatic GitHub Releases from `CHANGELOG.md` on `v*` tags.
+
 ## [2.1.0] - 2026-10-07
 
 ### Added

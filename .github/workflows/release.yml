@@ -1,0 +1,53 @@
+name: GitHub Release
+
+# Creates the GitHub Release for a pushed v* tag, using that version's section of
+# CHANGELOG.md as the notes. Images are published separately by docker-publish.yml.
+#
+# To release: add a `## [X.Y.Z] - date` section to CHANGELOG.md, bump package.json,
+# merge, then `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          # Everything between this version's heading and the next heading/link block.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && (/^## \[/ || /^\[[0-9]/) { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for ${version}"
+            exit 1
+          fi
+          {
+            echo
+            echo "**Docker:** \`ghcr.io/${GITHUB_REPOSITORY}:${version}\`"
+            echo "**Live demo:** https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          } >> notes.md
+          cat notes.md
+
+      - name: Create release (skipped if it already exists)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; leaving it alone."
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+          fi

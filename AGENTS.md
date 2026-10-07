@@ -133,4 +133,7 @@ in other languages; a proper i18n map is a welcome, separate change.
   it (asset 200s, cache headers, gzip, env.js injection), and publishes to GHCR on
   `master`/`main` (`latest`), `develop` (`dev`) and `v*` tags (semver).
 - Commit messages: imperative, sentence case, e.g. `Add collapsible sublists`.
+- User-visible changes get a line under `## [Unreleased]` in `CHANGELOG.md`. Releasing:
+  rename that section to `## [X.Y.Z] - date`, bump `package.json`, merge, then push tag
+  `vX.Y.Z` — `release.yml` creates the GitHub Release from the changelog section.
 - Never put secrets or API keys in the repo, fixtures, or `.npmrc`.
