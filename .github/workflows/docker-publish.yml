@@ -135,6 +135,33 @@ jobs:
           ' "$body"
           docker rm -f homedash-inj >/dev/null 2>&1 || true
 
+      - name: Framing is denied by default and opt-in via FRAME_ANCESTORS
+        run: |
+          set -euo pipefail
+          docker rm -f homedash-ci >/dev/null 2>&1 || true
+          docker run -d --name homedash-frame -p 8598:8595 karakeep-dashboard:ci
+          docker run -d --name homedash-frame-ok -p 8599:8595 \
+            -e FRAME_ANCESTORS='https://home.example.com self ";add_header X-Pwned 1;' \
+            karakeep-dashboard:ci
+          for port in 8598 8599; do
+            for i in $(seq 1 30); do
+              curl -fsS "http://127.0.0.1:${port}/" >/dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+          deny=$(curl -sI http://127.0.0.1:8598/)
+          echo "$deny" | grep -i 'x-frame-options: DENY' \
+            || { echo "::error::framing should be denied by default"; exit 1; }
+          echo "$deny" | grep -i "frame-ancestors 'none'" \
+            || { echo "::error::frame-ancestors 'none' missing by default"; exit 1; }
+          allow=$(curl -sI http://127.0.0.1:8599/)
+          echo "$allow" | grep -i "content-security-policy: frame-ancestors https://home.example.com 'self'" \
+            || { echo "::error::FRAME_ANCESTORS was not applied"; exit 1; }
+          if echo "$allow" | grep -qiE 'x-frame-options|x-pwned'; then
+            echo "::error::unexpected header with FRAME_ANCESTORS set"; exit 1
+          fi
+          docker rm -f homedash-frame homedash-frame-ok >/dev/null 2>&1 || true
+
       - name: Cache headers are as intended
         run: |
           set -euo pipefail

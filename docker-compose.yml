@@ -10,4 +10,6 @@ services:
       #
       # This must be the address your BROWSER can reach, not a Docker service name.
       KARAKEEP_URL: http://localhost:3000
+      # Optional: let a homelab dashboard (Homepage, Homarr, Dashy) embed this one.
+      # FRAME_ANCESTORS: http://localhost:3001
     restart: unless-stopped
