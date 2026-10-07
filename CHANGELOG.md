@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-07
+
 ### Added
 - Optional ⭐ Favourites card (⚙ → *Show favourites*), pinned to the top of the first
   column until you move it. Includes favourited bookmarks that are in no list.
@@ -54,7 +56,8 @@ First release of this fork: rewritten in TypeScript on the Karakeep REST API.
 - Collapsible lists and sublists, bookmark counts.
 - Progressive Web App with offline support.
 
-[Unreleased]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/releases/tag/v2.0.0
