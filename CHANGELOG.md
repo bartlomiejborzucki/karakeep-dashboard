@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-07
+
 ### Added
 - Unraid template (`unraid/karakeep-dashboard.xml`).
 - `FRAME_ANCESTORS` to allow embedding in Homepage, Homarr, Dashy or another dashboard
@@ -48,5 +50,7 @@ First release of this fork: rewritten in TypeScript on the Karakeep REST API.
 - Collapsible lists and sublists, bookmark counts.
 - Progressive Web App with offline support.
 
+[Unreleased]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/releases/tag/v2.0.0
