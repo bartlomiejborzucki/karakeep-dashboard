@@ -273,6 +273,10 @@ same checks, then builds the image and smoke-tests it end to end: every asset is
 fetched, cache headers are asserted, and `KARAKEEP_URL` is fed a hostile value to
 confirm it cannot inject code into the generated `env.js`.
 
+Working with an AI coding agent? [`AGENTS.md`](AGENTS.md) holds the project rules and
+invariants for OpenAI Codex, Claude Code (via `CLAUDE.md`) and any other agent that
+reads it.
+
 ## License
 
 GNU GPL v3 — see the LICENSE file.
