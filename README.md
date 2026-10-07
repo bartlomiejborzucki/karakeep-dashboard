@@ -38,6 +38,7 @@ docker run -d -p 8595:8595 -e KARAKEEP_URL=http://localhost:3000 ghcr.io/bartlom
 - 📴 **Works offline** — the last view stays available when Karakeep is unreachable
 - 📱 **Responsive** — desktop, tablet and mobile
 - 🏷️ **Tags & descriptions** — searchable always, shown on cards when you want them
+- ⭐ **Favourites** — optional card pinned to the top, including favourites that are in no list
 - 📂 **Collapsible lists & sublists** — collapse/expand lists and sublists with one click, with bookmark count badges
 - 🔒 **No backend** — your API key lives in your browser and is sent only to your own Karakeep; the image is static files on non-root nginx
 
@@ -257,6 +258,7 @@ host and port, exactly as in your browser's address bar) and/or `self`:
 | Number of columns | ⚙ settings | 2–6, default 4. Changing it resets the saved layout. |
 | Open in new tab | ⚙ settings | `target="_blank"` for bookmark links |
 | Show tags | ⚙ settings | Off by default. Tags are searchable either way. |
+| Show favourites | ⚙ settings | Off by default. A ⭐ Favourites card pinned to the top of the first column (drag it anywhere); one extra request on a full refresh. |
 | Include smart lists | ⚙ settings | Off by default |
 | Collapse lists by default | ⚙ settings | Off by default |
 | Collapse sublists by default | ⚙ settings | Off by default |

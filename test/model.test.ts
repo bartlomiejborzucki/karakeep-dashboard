@@ -12,7 +12,7 @@ import {
 } from '../src/model.ts';
 
 import type { ApiBookmark, Bookmark, List, Snapshot } from '../src/types.ts';
-import { SCHEMA_VERSION } from '../src/config.ts';
+import { FAVOURITES_LIST, SCHEMA_VERSION } from '../src/config.ts';
 
 interface LinkOpts {
     title?: string;
@@ -236,3 +236,16 @@ test('buildTree preserves empty manual lists when showEmptyLists is true', () =>
     assert.equal(editModeTree[0]?.id, 'm');
 });
 
+
+test('buildTree shows the favourites list only when asked to', () => {
+    const fav: List = { ...FAVOURITES_LIST };
+    const work: List = { id: 'work', name: 'Work', icon: null, parentId: null, type: 'manual' };
+    const a = norm(link('a'));
+    const snap = snapshotOf([fav, work], { [fav.id]: ['a'], work: ['a'] }, [a]);
+
+    assert.deepEqual(buildTree(snap).map((n) => n.id), ['work']);
+    assert.deepEqual(
+        buildTree(snap, { showFavourites: true }).map((n) => n.id).sort(),
+        [fav.id, 'work'].sort()
+    );
+});

@@ -130,6 +130,10 @@ export function renderSettings({ baseUrl, hasKey, prefs, status }: SettingsState
                     <span>Show tags on bookmarks</span>
                 </label>
                 <label class="settings-check">
+                    <input type="checkbox" id="settingsFavourites" ${prefs.showFavourites ? 'checked' : ''}>
+                    <span>Show favourites</span>
+                </label>
+                <label class="settings-check">
                     <input type="checkbox" id="settingsSmart" ${prefs.includeSmartLists ? 'checked' : ''}>
                     <span>Include smart lists</span>
                 </label>

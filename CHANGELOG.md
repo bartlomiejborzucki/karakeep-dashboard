@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Optional ⭐ Favourites card (⚙ → *Show favourites*), pinned to the top of the first
+  column until you move it. Includes favourited bookmarks that are in no list.
+
 ## [2.2.0] - 2026-10-07
 
 ### Added

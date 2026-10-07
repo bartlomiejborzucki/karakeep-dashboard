@@ -171,6 +171,21 @@ function renderList(list: ListNode, options: Required<RenderOptions>, sink: Book
  * appended across columns, matching the previous behaviour.
  */
 export function distributeColumns(lists: readonly ListNode[], prefs: Pick<Prefs, 'columnLayout' | 'columnOrder' | 'numColumns'>): ListNode[][] {
+    // Favourites are pinned to the top of the first column unless the saved layout
+    // says otherwise, i.e. until the user has dragged the card somewhere.
+    const favourites = lists.find((l) => l.type === 'favourites');
+    const placedByLayout = Object.values(prefs.columnLayout ?? {}).some((ids) => ids.includes(favourites?.id ?? ''));
+    if (!favourites || placedByLayout) return distribute(lists, prefs);
+
+    const columns = distribute(
+        lists.filter((l) => l !== favourites),
+        prefs
+    );
+    columns[0]!.unshift(favourites);
+    return columns;
+}
+
+function distribute(lists: readonly ListNode[], prefs: Pick<Prefs, 'columnLayout' | 'columnOrder' | 'numColumns'>): ListNode[][] {
     const count = Math.max(1, prefs.numColumns);
     const columns: ListNode[][] = Array.from({ length: count }, () => []);
 

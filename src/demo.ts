@@ -12,7 +12,9 @@ export const DEMO_BASE_URL = 'https://demo.karakeep.invalid';
 export const DEMO_API_KEY = 'demo';
 
 interface Seed {
-    list: string;
+    /** null: in no list — reachable only through favourites or search. */
+    list: string | null;
+    favourite?: boolean;
     title: string;
     url: string;
     tags?: string[];
@@ -33,13 +35,13 @@ const LISTS: ApiList[] = [
 ];
 
 const SEEDS: Seed[] = [
-    { list: 'daily', title: 'Hacker News', url: 'https://news.ycombinator.com', tags: ['news'] },
-    { list: 'daily', title: 'GitHub', url: 'https://github.com', tags: ['dev'] },
+    { list: 'daily', title: 'Hacker News', url: 'https://news.ycombinator.com', tags: ['news'], favourite: true },
+    { list: 'daily', title: 'GitHub', url: 'https://github.com', tags: ['dev'], favourite: true },
     { list: 'daily', title: 'r/selfhosted', url: 'https://www.reddit.com/r/selfhosted', tags: ['community'] },
     { list: 'daily', title: 'Lobsters', url: 'https://lobste.rs', tags: ['news'] },
     { list: 'daily', title: 'Wikipedia', url: 'https://en.wikipedia.org' },
     { list: 'daily', title: 'YouTube', url: 'https://www.youtube.com' },
-    { list: 'homelab', title: 'Karakeep', url: 'https://github.com/karakeep-app/karakeep', tags: ['bookmarks', 'self-hosted'], description: 'The bookmark-everything app' },
+    { list: 'homelab', title: 'Karakeep', url: 'https://github.com/karakeep-app/karakeep', tags: ['bookmarks', 'self-hosted'], description: 'The bookmark-everything app', favourite: true },
     { list: 'homelab', title: 'Proxmox VE', url: 'https://www.proxmox.com', tags: ['virtualization'] },
     { list: 'homelab', title: 'Tailscale', url: 'https://tailscale.com', tags: ['vpn', 'network'] },
     { list: 'homelab', title: 'Traefik Proxy', url: 'https://traefik.io', tags: ['reverse-proxy'] },
@@ -48,7 +50,7 @@ const SEEDS: Seed[] = [
     { list: 'homelab-media', title: 'Jellyfin', url: 'https://jellyfin.org', tags: ['media'] },
     { list: 'homelab-media', title: 'Immich', url: 'https://immich.app', tags: ['photos'] },
     { list: 'homelab-media', title: 'Navidrome', url: 'https://www.navidrome.org', tags: ['music'] },
-    { list: 'homelab-monitoring', title: 'Grafana', url: 'https://grafana.com', tags: ['monitoring'] },
+    { list: 'homelab-monitoring', title: 'Grafana', url: 'https://grafana.com', tags: ['monitoring'], favourite: true },
     { list: 'homelab-monitoring', title: 'Uptime Kuma', url: 'https://github.com/louislam/uptime-kuma', tags: ['monitoring'] },
     { list: 'homelab-monitoring', title: 'Prometheus', url: 'https://prometheus.io', tags: ['monitoring'] },
     { list: 'dev', title: 'TypeScript Playground', url: 'https://www.typescriptlang.org/play', tags: ['typescript'] },
@@ -69,12 +71,13 @@ const SEEDS: Seed[] = [
     { list: 'design', title: 'Coolors', url: 'https://coolors.co', tags: ['colors'] },
     { list: 'design', title: 'Google Fonts', url: 'https://fonts.google.com', tags: ['fonts'] },
     { list: 'tools', title: 'CyberChef', url: 'https://gchq.github.io/CyberChef/', tags: ['tools'] },
-    { list: 'tools', title: 'Excalidraw', url: 'https://excalidraw.com', tags: ['diagrams'] },
+    { list: 'tools', title: 'Excalidraw', url: 'https://excalidraw.com', tags: ['diagrams'], favourite: true },
     { list: 'tools', title: 'crontab.guru', url: 'https://crontab.guru', tags: ['cron'] },
     { list: 'tools', title: 'Squoosh', url: 'https://squoosh.app', tags: ['images'] },
     { list: 'learning', title: 'Exercism', url: 'https://exercism.org', tags: ['practice'] },
     { list: 'learning', title: 'roadmap.sh', url: 'https://roadmap.sh', tags: ['career'] },
     { list: 'learning', title: 'The Missing Semester', url: 'https://missing.csail.mit.edu', tags: ['cli'] },
+    { list: null, title: 'Karakeep docs', url: 'https://docs.karakeep.app', tags: ['docs'], favourite: true },
 ];
 
 function seedStore() {
@@ -87,10 +90,11 @@ function seedStore() {
             createdAt: new Date(Date.UTC(2026, 0, 1 + i)).toISOString(),
             title: seed.title,
             archived: false,
+            favourited: seed.favourite ?? false,
             tags: (seed.tags ?? []).map((name) => ({ id: `tag-${name}`, name, attachedBy: 'human' })),
             content: { type: 'link', url: seed.url, title: seed.title, description: seed.description ?? null },
         });
-        membership.get(seed.list)!.push(id);
+        if (seed.list) membership.get(seed.list)!.push(id);
     });
     return { bookmarks, membership };
 }
@@ -113,6 +117,7 @@ export function createDemoClient(): KarakeepClient {
             (membership.get(listId) ?? [])
                 .map((id) => bookmarks.get(id))
                 .filter((b): b is ApiBookmark => b !== undefined && !b.archived),
+        getFavouriteBookmarks: async () => [...bookmarks.values()].filter((b) => b.favourited && !b.archived),
         searchBookmarks: async (query) => {
             const q = query.toLowerCase();
             return [...bookmarks.values()].filter((b) => {
