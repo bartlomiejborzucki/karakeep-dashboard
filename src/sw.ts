@@ -10,10 +10,9 @@
  *
  * 2. Offline fallback for the app shell. Strategy: network-first. When online this
  *    is a no-op — `fetch()` still goes through the normal HTTP cache, so nginx's
- *    max-age/stale-while-revalidate headers do the actual speed work — and the
- *    cached copy is only ever used when the network fails. That ordering is what
- *    makes a service worker safe in a project with no build step: it is incapable
- *    of pinning anyone to a stale version.
+ *    no-cache / immutable headers do the actual speed work — and the cached copy
+ *    is only ever used when the network fails. That ordering is what makes the
+ *    worker incapable of pinning anyone to a stale version.
  *
  * Karakeep's API is excluded from both. Same-origin is not a good enough test for
  * that, because Karakeep is often reverse-proxied onto this same host, so the

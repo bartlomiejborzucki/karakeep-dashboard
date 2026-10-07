@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Bookmarks Dashboard">
+    <meta name="description" content="KaraKeep Dashboard — a fast start page for your Karakeep bookmarks">
     <!-- script-src 'self' is real protection for the API token in localStorage.
          It is only possible because SortableJS is vendored and no inline handlers remain.
          img-src and connect-src stay open: favicons come from anywhere, and the
@@ -29,7 +29,7 @@
             <div class="header-top">
                 <h1>Bookmarks</h1>
                 <div class="header-actions">
-                    <button type="button" id="editModeButton" class="karakeep-link" title="Tryb edycji" aria-label="Włącz tryb edycji">
+                    <button type="button" id="editModeButton" class="karakeep-link" title="Edit mode" aria-label="Enter edit mode">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -75,27 +75,27 @@
     <div id="editActionBar" class="edit-action-bar" hidden>
         <div class="edit-action-bar-content">
             <div class="edit-action-info">
-                <span class="edit-mode-badge">Tryb edycji</span>
-                <span class="edit-mode-hint">Przeciągaj zakładki między listami lub do stref poniżej</span>
+                <span class="edit-mode-badge">Edit mode</span>
+                <span class="edit-mode-hint">Drag bookmarks between lists, or onto the zones below</span>
             </div>
             <div class="edit-dropzones">
-                <div id="archiveDropzone" class="dropzone dropzone-archive" title="Upuść tutaj, aby przenieść do archiwum">
+                <div id="archiveDropzone" class="dropzone dropzone-archive" title="Drop here to archive">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="21 8 21 21 3 21 3 8"></polyline>
                         <rect x="1" y="3" width="22" height="5"></rect>
                         <line x1="10" y1="12" x2="14" y2="12"></line>
                     </svg>
-                    <span class="dropzone-label">Archiwizuj</span>
+                    <span class="dropzone-label">Archive</span>
                 </div>
-                <div id="trashDropzone" class="dropzone dropzone-trash" title="Upuść tutaj, aby usunąć">
+                <div id="trashDropzone" class="dropzone dropzone-trash" title="Drop here to delete">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
-                    <span class="dropzone-label">Usuń</span>
+                    <span class="dropzone-label">Delete</span>
                 </div>
             </div>
-            <button type="button" id="exitEditModeBtn" class="btn-exit-edit">Gotowe</button>
+            <button type="button" id="exitEditModeBtn" class="btn-exit-edit">Done</button>
         </div>
     </div>
 

@@ -81,7 +81,7 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
            rel="${target === '_blank' ? 'noopener noreferrer' : ''}"
            draggable="false">
             ${editMode ? `
-                <span class="bookmark-drag-handle" title="Przeciągnij">
+                <span class="bookmark-drag-handle" title="Drag">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="9" cy="5" r="1.5" fill="currentColor"></circle>
                         <circle cx="9" cy="12" r="1.5" fill="currentColor"></circle>
@@ -108,14 +108,14 @@ function renderBookmark(bookmark: Bookmark, options: Required<RenderOptions>, si
             </div>
             ${editMode ? `
                 <div class="bookmark-edit-actions">
-                    <button type="button" class="bookmark-action-btn btn-archive" data-action="archive" title="Przenieś do archiwum" aria-label="Archiwizuj">
+                    <button type="button" class="bookmark-action-btn btn-archive" data-action="archive" title="Archive" aria-label="Archive">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="21 8 21 21 3 21 3 8"></polyline>
                             <rect x="1" y="3" width="22" height="5"></rect>
                             <line x1="10" y1="12" x2="14" y2="12"></line>
                         </svg>
                     </button>
-                    <button type="button" class="bookmark-action-btn btn-delete" data-action="delete" title="Usuń" aria-label="Usuń">
+                    <button type="button" class="bookmark-action-btn btn-delete" data-action="delete" title="Delete" aria-label="Delete">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -158,7 +158,7 @@ function renderList(list: ListNode, options: Required<RenderOptions>, sink: Book
             </div>
             <div class="bookmark-grid${list.bookmarks.length === 0 ? ' is-empty' : ''}" data-list-id="${esc(list.id)}" data-list-type="${esc(list.type)}">
                 ${list.bookmarks.map((b) => renderBookmark(b, options, sink)).join('')}
-                ${list.bookmarks.length === 0 ? `<div class="empty-list-dropzone"><span>Brak zakładek</span></div>` : ''}
+                ${list.bookmarks.length === 0 ? `<div class="empty-list-dropzone"><span>No bookmarks</span></div>` : ''}
             </div>
             ${list.children.map((child) => renderList(child, options, sink, Math.min(level + 1, 2))).join('')}
         </div>
