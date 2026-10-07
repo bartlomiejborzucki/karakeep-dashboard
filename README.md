@@ -39,7 +39,7 @@ docker run -d -p 8595:8595 -e KARAKEEP_URL=http://localhost:3000 ghcr.io/bartlom
 - 📱 **Responsive** — desktop, tablet and mobile
 - 🏷️ **Tags & descriptions** — searchable always, shown on cards when you want them
 - 📂 **Collapsible lists & sublists** — collapse/expand lists and sublists with one click, with bookmark count badges
-- 🔒 **No backend** — your API key lives in your browser and is sent only to your own Karakeep
+- 🔒 **No backend** — your API key lives in your browser and is sent only to your own Karakeep; the image is static files on non-root nginx
 
 ## Quick start
 
