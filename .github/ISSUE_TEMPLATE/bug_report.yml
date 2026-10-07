@@ -1,0 +1,61 @@
+name: Bug report
+description: Something does not work as described in the README
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the **Troubleshooting** section of the README first —
+        most connection problems are mixed content (https page, http Karakeep) or a reverse proxy
+        stripping CORS headers.
+        **Never paste your API key.**
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message or console output
+      description: The text of the error box or toast, and anything red in the browser console (F12).
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Dashboard version / image tag
+      placeholder: "latest, 2.1.0, or a commit"
+    validations:
+      required: true
+  - type: input
+    id: karakeep
+    attributes:
+      label: Karakeep version
+      placeholder: "0.x.y"
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How do you run it?
+      options:
+        - Docker / Docker Compose
+        - Synology (Container Manager / Dockhand / Portainer)
+        - Unraid / CasaOS / other NAS UI
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: "Firefox 140 on Windows, Safari on iOS 19 (installed as PWA), ..."
+  - type: dropdown
+    id: proxy
+    attributes:
+      label: Is Karakeep behind a reverse proxy?
+      options:
+        - "No"
+        - "Yes"
+        - Not sure

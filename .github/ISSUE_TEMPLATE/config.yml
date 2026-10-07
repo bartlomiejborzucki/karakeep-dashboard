@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/bartlomiejborzucki/karakeep-dashboard/discussions
+    about: Setup help, show-and-tell and open-ended ideas belong in Discussions.
+  - name: Security vulnerability
+    url: https://github.com/bartlomiejborzucki/karakeep-dashboard/security/advisories/new
+    about: Please report security issues privately, not as a public issue.
+  - name: Karakeep itself
+    url: https://github.com/karakeep-app/karakeep/issues
+    about: Problems with Karakeep (not this dashboard) belong in the Karakeep repository.
