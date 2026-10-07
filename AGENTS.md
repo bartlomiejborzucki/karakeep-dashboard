@@ -43,6 +43,7 @@ env.js           placeholder; regenerated at container start from $KARAKEEP_URL
 build.mjs        esbuild bundle + sha256 content hashing + HTML templating
 nginx.conf       static server, cache headers chosen via `map $uri`
 docker-entrypoint.d/10-env.sh   writes env.js (sanitised — it is an injection sink)
+docker-entrypoint.d/11-frame-ancestors.sh   writes the nginx framing policy from $FRAME_ANCESTORS (sanitised)
 src/types.ts     API response shapes and the normalized model
 src/config.ts    constants, localStorage keys, SCHEMA_VERSION
 src/storage.ts   localStorage: credentials, prefs, collapse state, legacy migration
@@ -85,6 +86,8 @@ a new non-DOM entry point needs its own config.
    `sw.js` must keep a stable, unhashed URL.
 6. **`env.js` only ever holds a URL, never a token.** `10-env.sh` whitelists characters;
    CI injects a hostile `KARAKEEP_URL` and evaluates the result. Keep both.
+   The same applies to `FRAME_ANCESTORS` (`11-frame-ancestors.sh`, covered by
+   `test/entrypoint.test.ts` and a CI smoke step): framing stays denied by default.
 7. **Bump `SCHEMA_VERSION`** in `src/config.ts` whenever the `Snapshot` shape changes.
    Old caches are then discarded instead of misread.
 8. **Snapshots are keyed by `serverId(baseUrl, userId)`** so one account's bookmarks are

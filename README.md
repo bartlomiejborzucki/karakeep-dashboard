@@ -164,11 +164,85 @@ Even when KaraKeep runs on the same NAS, keep `KARAKEEP_URL` as the LAN address:
   LAN-only: reach it over Tailscale/WireGuard or behind the reverse proxy's own
   authentication rather than forwarding 8595 on your router.
 
+## Use it with Homepage, Homarr or Dashy
+
+Already running a homelab dashboard? Add KaraKeep Dashboard as a tile, or embed it.
+The examples assume it is reachable at `http://192.168.1.50:8595` — use your own address.
+
+**As a link tile** works everywhere with no configuration. The app icon is served at
+`/icon-192.png`.
+
+<details>
+<summary><b>Homepage</b> (<code>services.yaml</code>)</summary>
+
+```yaml
+- Bookmarks:
+    - KaraKeep Dashboard:
+        href: http://192.168.1.50:8595
+        icon: http://192.168.1.50:8595/icon-192.png
+        description: All my bookmarks on one page
+```
+
+Embedded, with Homepage's iframe widget:
+
+```yaml
+- Bookmarks:
+    - KaraKeep Dashboard:
+        widget:
+          type: iframe
+          name: karakeep-dashboard
+          src: http://192.168.1.50:8595
+          classes: h-96 sm:h-96 md:h-[40rem]
+```
+</details>
+
+<details>
+<summary><b>Homarr</b></summary>
+
+Add an **App** with the URL above and the icon URL `http://192.168.1.50:8595/icon-192.png`,
+or, to embed it, add an **iFrame** widget pointing at `http://192.168.1.50:8595`.
+</details>
+
+<details>
+<summary><b>Dashy</b> (<code>conf.yml</code>)</summary>
+
+```yaml
+sections:
+  - name: Bookmarks
+    items:
+      - title: KaraKeep Dashboard
+        url: http://192.168.1.50:8595
+        icon: http://192.168.1.50:8595/icon-192.png
+    widgets:
+      - type: iframe
+        options:
+          url: http://192.168.1.50:8595
+          frameHeight: 800
+```
+</details>
+
+**Embedding needs an opt-in.** By default the dashboard refuses to be framed, so another
+page cannot overlay it to trick you into clicks while it holds your API key. Allow the
+dashboards you trust with `FRAME_ANCESTORS`, a space-separated list of origins (scheme,
+host and port, exactly as in your browser's address bar) and/or `self`:
+
+```yaml
+    environment:
+      KARAKEEP_URL: http://192.168.1.50:3000
+      FRAME_ANCESTORS: http://192.168.1.50:3000 https://home.example.com
+```
+
+> Browsers keep storage separately for embedded pages. If your homelab dashboard and
+> KaraKeep Dashboard live on different hosts, the embedded copy asks for the API key
+> once, separately from the copy you open directly. Some browsers (Safari, Firefox
+> strict mode) block that storage entirely in cross-site iframes; use a link tile there.
+
 ## Configuration
 
 | Setting | Where | Notes |
 |---|---|---|
 | `KARAKEEP_URL` | container env var | Optional. Only pre-fills the setup form. Never a token. |
+| `FRAME_ANCESTORS` | container env var | Optional. Origins allowed to embed the dashboard in an iframe (`self` and/or `http(s)://host[:port]`, space-separated). Unset: embedding is denied. |
 | KaraKeep address | setup screen / ⚙ settings | Stored in `localStorage` |
 | API key | setup screen / ⚙ settings | Stored in `localStorage`, never leaves your browser |
 | Number of columns | ⚙ settings | 2–6, default 4. Changing it resets the saved layout. |
