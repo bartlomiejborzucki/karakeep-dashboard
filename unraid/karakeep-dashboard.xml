@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>karakeep-dashboard</Name>
+  <Repository>ghcr.io/bartlomiejborzucki/karakeep-dashboard:latest</Repository>
+  <Registry>https://github.com/bartlomiejborzucki/karakeep-dashboard/pkgs/container/karakeep-dashboard</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/bartlomiejborzucki/karakeep-dashboard/discussions</Support>
+  <Project>https://github.com/bartlomiejborzucki/karakeep-dashboard</Project>
+  <ReadMe>https://github.com/bartlomiejborzucki/karakeep-dashboard#readme</ReadMe>
+  <Overview>A fast start page for your Karakeep bookmarks: every list on one page in a masonry grid, instant offline search, drag and drop between lists, and an installable PWA.[br][br]The container only serves static files (non-root nginx, no volumes). Your browser talks to Karakeep directly: open the WebUI, paste your Karakeep address and an API key from Karakeep - Settings - API Keys. The key is stored in your browser only.[br][br]Requires a running Karakeep instance.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:8595]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/bartlomiejborzucki/karakeep-dashboard/master/unraid/karakeep-dashboard.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/bartlomiejborzucki/karakeep-dashboard/master/icon-512.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>A running Karakeep instance and an API key (Karakeep - Settings - API Keys).</Requires>
+  <Config Name="WebUI port" Target="8595" Default="8595" Mode="tcp" Description="Port the dashboard is served on." Type="Port" Display="always" Required="true" Mask="false">8595</Config>
+  <Config Name="Karakeep URL" Target="KARAKEEP_URL" Default="" Mode="" Description="Optional. Pre-fills the setup screen. Must be the address your BROWSER uses to reach Karakeep, e.g. http://192.168.1.50:3000 - not a Docker container name and not localhost." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Allow embedding from" Target="FRAME_ANCESTORS" Default="" Mode="" Description="Optional. Space-separated origins (e.g. http://192.168.1.50:3001) or 'self' allowed to show the dashboard in an iframe, for Homepage, Homarr or Dashy. Empty: embedding is denied." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>
