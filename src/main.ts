@@ -178,7 +178,7 @@ function mountGrid(snapshot: Snapshot): boolean {
 
     const term = searchInput()?.value ?? '';
     if (term) runFilter(term);
-    else updateFooter(snapshot.bookmarks.length);
+    else updateFooter(state.index?.total ?? 0);
     window.scrollTo(0, scrollY);
 
     if (state.editMode) {
@@ -307,7 +307,6 @@ async function handleArchiveBookmark(bookmarkId: string, fromListId: string): Pr
     await writeSnapshot(snapshot);
     state.mountedHtml = '';
     mountGrid(snapshot);
-    updateFooter(snapshot.bookmarks.length);
     showToast(`Archived “${title}”.`);
 
     try {
@@ -348,7 +347,6 @@ async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): P
     await writeSnapshot(snapshot);
     state.mountedHtml = '';
     mountGrid(snapshot);
-    updateFooter(snapshot.bookmarks.length);
     showToast(`Deleted “${title}”.`);
 
     try {
@@ -365,7 +363,9 @@ async function handleDeleteBookmark(bookmarkId: string, _fromListId?: string): P
 function runFilter(term: string): void {
     if (state.remoteMode) return;
     const matches = applyFilter(state.index, term);
-    const total = state.snapshot?.bookmarks.length ?? 0;
+    // Counted from what is rendered, not the snapshot: the snapshot also holds
+    // bookmarks that only live in hidden smart lists.
+    const total = state.index?.total ?? 0;
     updateFooter(total, term.trim() ? matches : null);
 
     const host = document.getElementById('remotePrompt');
@@ -426,6 +426,30 @@ function exitRemoteMode(): void {
     updateFooter(0);
     state.index = null;
     content().innerHTML = state.revalidating ? renderLoading('Loading bookmarks…') : renderEmpty();
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    return target.isContentEditable || target.matches('input, textarea, select');
+}
+
+// Escape in the search box clears it (and leaves remote results) before it does
+// anything else; a second Escape on an empty box gives focus back to the page.
+function onSearchKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return;
+    const input = event.currentTarget as HTMLInputElement;
+    // Stop the document-level handler from also leaving edit mode on the same press.
+    event.stopPropagation();
+    if (state.remoteMode) {
+        exitRemoteMode();
+        return;
+    }
+    if (input.value) {
+        input.value = '';
+        runFilter('');
+    } else {
+        input.blur();
+    }
 }
 
 /* --------------------------------------------------------------------- setup */
@@ -817,7 +841,24 @@ function wireChrome(): void {
     });
 
     const input = searchInput();
-    if (input) attachSearch(input, runFilter);
+    if (input) {
+        attachSearch(input, runFilter);
+        input.addEventListener('keydown', onSearchKeydown);
+    }
+
+    // `/` jumps to search, as on GitHub and most docs sites. Ignored while typing
+    // elsewhere or while a dialog or the settings panel is open.
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (isTypingTarget(event.target)) return;
+        if (document.querySelector('.confirm-dialog-container')) return;
+        if (!document.getElementById('settings')?.hidden) return;
+        const search = searchInput();
+        if (!search) return;
+        event.preventDefault();
+        search.focus();
+        search.select();
+    });
 
     document.getElementById('remotePrompt')?.addEventListener('click', (event) => {
         const action = (event.target as Element | null)?.closest<HTMLElement>('[data-action]');

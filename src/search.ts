@@ -12,6 +12,7 @@ const GROUP_SELECTOR = '.list-section, .nested-list-1, .nested-list-2';
 
 interface IndexItem {
     el: Element;
+    id: string;
     hay: string;
 }
 
@@ -30,6 +31,18 @@ export interface SearchIndex {
     items: IndexItem[];
     groups: IndexGroup[];
     columns: IndexColumn[];
+    // Unique bookmarks on screen. A bookmark in two lists (or also in Favourites) is
+    // rendered twice but is still one bookmark, so counts go through ids, not anchors.
+    total: number;
+}
+
+/** Splits a query into lowercase terms; every term must match (AND), in any order. */
+export function parseTerms(raw: string): string[] {
+    return raw.toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+export function matchesTerms(hay: string, terms: readonly string[]): boolean {
+    return terms.every((term) => hay.includes(term));
 }
 
 export function buildIndex(container: Element, modelItems: readonly Bookmark[]): SearchIndex {
@@ -42,7 +55,7 @@ export function buildIndex(container: Element, modelItems: readonly Bookmark[]):
     const count = Math.min(anchors.length, modelItems.length);
     for (let i = 0; i < count; i++) {
         const el = anchors[i]!;
-        items.push({ el, hay: modelItems[i]!.hay });
+        items.push({ el, id: modelItems[i]!.id, hay: modelItems[i]!.hay });
         indexOfEl.set(el, i);
     }
 
@@ -67,32 +80,34 @@ export function buildIndex(container: Element, modelItems: readonly Bookmark[]):
         columns.push({ el, sectionIdx });
     }
 
-    return { container, items, groups, columns };
+    const total = new Set(items.map((item) => item.id)).size;
+    return { container, items, groups, columns, total };
 }
 
-/** Number of bookmarks still visible; the caller uses 0 to offer a server-side search. */
+/** Number of distinct bookmarks still visible; the caller uses 0 to offer a server-side search. */
 export function applyFilter(index: SearchIndex | null, rawTerm: string): number {
     if (!index) return 0;
-    const term = rawTerm.toLowerCase().trim();
+    const terms = parseTerms(rawTerm);
     const grid = index.container.querySelector('.grid-container');
 
-    if (!term) {
+    if (!terms.length) {
         for (const item of index.items) item.el.classList.remove('is-hidden');
         for (const group of index.groups) group.el.classList.remove('is-hidden');
         for (const column of index.columns) column.el.classList.remove('is-hidden');
         grid?.classList.remove('is-filtering');
-        return index.items.length;
+        return index.total;
     }
 
     grid?.classList.add('is-filtering');
 
     const visible = new Uint8Array(index.items.length);
-    let matches = 0;
+    const matchedIds = new Set<string>();
     for (let i = 0; i < index.items.length; i++) {
-        const match = index.items[i]!.hay.includes(term);
+        const item = index.items[i]!;
+        const match = matchesTerms(item.hay, terms);
         visible[i] = match ? 1 : 0;
-        if (match) matches++;
-        index.items[i]!.el.classList.toggle('is-hidden', !match);
+        if (match) matchedIds.add(item.id);
+        item.el.classList.toggle('is-hidden', !match);
     }
 
     const groupVisible = new Uint8Array(index.groups.length);
@@ -108,7 +123,7 @@ export function applyFilter(index: SearchIndex | null, rawTerm: string): number 
         column.el.classList.toggle('is-hidden', !any);
     }
 
-    return matches;
+    return matchedIds.size;
 }
 
 // The filter is now cheaper than the 300ms debounce that used to hide its cost,

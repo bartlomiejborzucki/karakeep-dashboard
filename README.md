@@ -285,7 +285,7 @@ Bundled assets are content-hashed (`assets/main-9c61bb9f.js`), so they are serve
 
 ### Search
 
-Search runs against the local cache, so it is instant and works offline. It matches titles, URLs **and tags**. When nothing on the dashboard matches, you are offered a **Search all of Karakeep** button that queries `/bookmarks/search` — that reaches archived bookmarks and ones not in any list, which the dashboard never holds.
+Search runs against the local cache, so it is instant and works offline. It matches titles, URLs **and tags**; several words must all match, in any order. Press <kbd>/</kbd> to jump to the search box and <kbd>Esc</kbd> to clear it. When nothing on the dashboard matches, you are offered a **Search all of Karakeep** button that queries `/bookmarks/search` — that reaches archived bookmarks and ones not in any list, which the dashboard never holds.
 
 ### Limits, stated plainly
 

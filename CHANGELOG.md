@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Multi-word search: every word must match, in any order.
+- Keyboard shortcuts: <kbd>/</kbd> focuses search, <kbd>Esc</kbd> clears it.
+
+### Fixed
+- The footer counted a bookmark once per card it appears on (several lists, or the
+  Favourites card), and included bookmarks that only live in hidden smart lists.
+
 ## [2.3.0] - 2026-10-07
 
 ### Added
