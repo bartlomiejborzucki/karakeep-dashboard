@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-08
+
 ### Added
 - Multi-word search: every word must match, in any order.
 - Keyboard shortcuts: <kbd>/</kbd> focuses search, <kbd>Esc</kbd> clears it.
@@ -64,7 +66,8 @@ First release of this fork: rewritten in TypeScript on the Karakeep REST API.
 - Collapsible lists and sublists, bookmark counts.
 - Progressive Web App with offline support.
 
-[Unreleased]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/bartlomiejborzucki/karakeep-dashboard/compare/v2.0.0...v2.1.0
