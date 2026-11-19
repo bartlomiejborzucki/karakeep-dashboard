@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- The image applies pending Alpine security updates on top of the nginx base image
+  (OpenSSL, musl, zlib, expat, curl were behind), and `latest` is rebuilt weekly.
+- nginx no longer reveals its version (`server_tokens off`).
+- New response headers: `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Opener-Policy: same-origin` and a restrictive `Permissions-Policy`.
+
 ## [2.4.0] - 2026-11-08
 
 ### Added

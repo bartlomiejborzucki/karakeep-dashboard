@@ -379,8 +379,9 @@ happen: changing the count clears the saved layout on purpose. If it does, use
 
 Contributions welcome. Run `npm run check` before opening a pull request. CI runs the
 same checks, then builds the image and smoke-tests it end to end: every asset is
-fetched, cache headers are asserted, and `KARAKEEP_URL` is fed a hostile value to
-confirm it cannot inject code into the generated `env.js`.
+fetched, cache and security headers are asserted, and `KARAKEEP_URL` is fed a hostile
+value to confirm it cannot inject code into the generated `env.js`. The image is also
+rebuilt weekly so nginx and Alpine security fixes reach `latest` between releases.
 
 Working with an AI coding agent? [`AGENTS.md`](AGENTS.md) holds the project rules and
 invariants for OpenAI Codex, Claude Code (via `CLAUDE.md`) and any other agent that
