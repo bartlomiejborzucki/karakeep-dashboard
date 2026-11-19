@@ -18,7 +18,7 @@ RUN npm run typecheck && npm test && npm run build
 
 # Runtime stage. The unprivileged variant runs nginx as uid 101 instead of root;
 # 8595 is above 1024, so nothing needs to change about the port.
-FROM nginxinc/nginx-unprivileged:alpine
+FROM nginxinc/nginx-unprivileged:alpine AS runtime
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -29,8 +29,12 @@ COPY docker-entrypoint.d/10-env.sh docker-entrypoint.d/11-frame-ancestors.sh /do
 # They run as the unprivileged user and rewrite env.js and the framing policy, so
 # those two files (and only those) must be writable by it. A deny-by-default policy
 # is generated at build time too, so nginx starts even if the script is skipped.
+# The upstream image is rebuilt less often than Alpine ships fixes (openssl, musl,
+# zlib, curl...), so pending security updates are applied here. CI builds this
+# stage without cache (no-cache-filters: runtime), otherwise the layer would freeze.
 USER root
-RUN chmod 755 /docker-entrypoint.d/10-env.sh /docker-entrypoint.d/11-frame-ancestors.sh \
+RUN apk upgrade --no-cache \
+ && chmod 755 /docker-entrypoint.d/10-env.sh /docker-entrypoint.d/11-frame-ancestors.sh \
  && mkdir -p /etc/nginx/kkhd \
  && FRAME_ANCESTORS= /docker-entrypoint.d/11-frame-ancestors.sh \
  && chown -R 101:101 /etc/nginx/kkhd /usr/share/nginx/html/env.js
